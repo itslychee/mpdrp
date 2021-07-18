@@ -1,4 +1,5 @@
 # mpdrp
+
 mpdrp is a [Discord](https://discord.com) Rich Presence for the music application, [MPD](https://musicpd.org). It supports any platform that 
 Discord supports, although I don't test on OSX, there shouldn't be any issues with that platform.
 
@@ -29,3 +30,11 @@ Replace `mpdrp` with `mpc` if you would like to instead build `cmd/mpc`
 ## Goals
 - Maintain a nice, manageable codebase to encourage contributions
 - Maybe move `discord` and make a library for all RPC functionalities?
+
+## Screenshots 
+
+![https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-playing.go](MPD Playing)
+
+![https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-paused.go](MPD Paused)
+
+![https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-stopped.go](MPD Stopped)
