@@ -33,8 +33,8 @@ Replace `mpdrp` with `mpc` if you would like to instead build `cmd/mpc`
 
 ## Screenshots 
 
-![MPD Playing](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-playing.go)
+![MPD Playing](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-playing.png)
 
-![MPD Paused](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-paused.go)
+![MPD Paused](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-paused.png)
 
-![MPD Stopped](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-stopped.go)
+![MPD Stopped](https://raw.githubusercontent.com/ItsLychee/mpdrp/main/assets/showcase-stopped.png)
