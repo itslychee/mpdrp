@@ -107,16 +107,23 @@ func updateRichPresence(discordSocket *ipc.DiscordPresence, mpdClient *mpd.MPDCo
 
 	switch r.Records["state"] {
 	case "play":
-		t, err := strconv.ParseInt(r.Records["Time"], 10, 64)
+		elapsed, err := strconv.ParseFloat(r.Records["elapsed"], 64)
+		duration, err1 := strconv.ParseFloat(r.Records["duration"], 64)
+
 		if err != nil {
 			panic(err)
 		}
-		songEnd := time.Now().Add(time.Second * time.Duration(t))
+		if err1 != nil {
+			panic(err)
+		}
+
+		now := time.Now()
+		secondsLeft := now.Add(time.Second * time.Duration(duration - elapsed))
 
 		// Payload
 		payload.Details = &details
 		payload.State = &state
-		payload.Timestamps = &ipc.Timestamps{End: int(songEnd.Unix())}
+		payload.Timestamps = &ipc.Timestamps{End: int(secondsLeft.Unix())}
 		payload.Assets.SmallImage = "mpd_play"
 		payload.Assets.SmallText = "Playing"
 
