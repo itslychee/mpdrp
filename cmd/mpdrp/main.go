@@ -187,8 +187,15 @@ func updateRichPresence(ipcSocket *ipc.DiscordPresence, mpc *mpd.MPDConnection) 
 		log.Panic(err)
 	}
 
-	var albumArtist = []string{r.Records["Album"], r.Records["Artist"]}
-	var state = strings.Join(albumArtist, " by ")
+	if r.Records["Artist"] == "" {
+		r.Records["Artist"] = "unknown artist"
+	}
+
+	var artistAlbum = []string{r.Records["Artist"]}
+	if album := r.Records["Album"]; album != "" {
+		artistAlbum = append(artistAlbum, album)
+	}
+	var state = strings.Join(artistAlbum, " - ")
 	var details = r.Records["Title"]
 
 	var payload = ipc.Activity{
