@@ -114,9 +114,6 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 		default:
 			fields := strings.SplitN(string(s), ":", 2)
 			fields[1] = strings.TrimSpace(fields[1])
-			if fields[1] == "" {
-				fields[1] = "n/a"
-			}
 			response.Records[fields[0]] = fields[1]
 			if fields[0] == "binary" {
 				// After retrieving the binary data, we won't break out of this loop as
