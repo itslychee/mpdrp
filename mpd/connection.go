@@ -93,7 +93,7 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 			// https://github.com/MusicPlayerDaemon/MPD/blob/d39b11ba5d0f9e36e59f1fdf7321bcd64c3bfe26/src/protocol/Ack.hxx#L26L40
 			//
 			// It also seems if MPD doesn't support 32 bit platforms (but don't take my word for it), so
-			// binary.Uvarint doesn't seem like a bad choice here.
+			// returning a 64 bit from calling ParseUint doesn't seem like a bad choice here.
 
 			enum, err := strconv.ParseUint(string(res[1]), 10, 64)
 			if err != nil {
@@ -116,7 +116,7 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 			fields[1] = strings.TrimSpace(fields[1])
 			if fields[1] == "" {
 				fields[1] = "n/a"
-			} 
+			}
 			response.Records[fields[0]] = fields[1]
 			if fields[0] == "binary" {
 				// After retrieving the binary data, we won't break out of this loop as
