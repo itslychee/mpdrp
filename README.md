@@ -26,6 +26,8 @@ Replace `mpdrp` with `mpc` if you would like to instead build `cmd/mpc`
 - [ ] Support a reconnection logic to make better use of process managers for error handling
 - [ ] More options for `cmd/mpdrp`
     - [ ] A configuration file
+- [x] Honor MPD's connection defaults in an efficient manner (https://mpd.readthedocs.io/en/latest/client.html#connecting-to-mpd)
+
 
 ## Goals
 - Maintain a nice, manageable codebase to encourage contributions
