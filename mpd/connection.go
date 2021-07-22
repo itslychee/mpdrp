@@ -16,23 +16,13 @@ type MPDConnection struct {
 	conn *textproto.Conn
 }
 
-func (mpd *MPDConnection) Connect(network, address string, timeout *time.Duration) error {
+func (mpd *MPDConnection) Connect(network, address string, timeout time.Duration) error {
 	// Support timeouts to allow more flexibility
-	if timeout != nil {
-		c, err := net.DialTimeout(network, address, *timeout)
-		if err != nil {
-			return err
-		}
-
-		mpd.conn = textproto.NewConn(c)
-	} else {
-		c, err := textproto.Dial(network, address)
-		if err != nil {
-			return err
-		}
-		mpd.conn = c
+	c, err := net.DialTimeout(network, address, timeout)
+	if err != nil {
+		return err
 	}
-
+	mpd.conn = textproto.NewConn(c)
 	s, err := mpd.conn.R.ReadString(0x0A)
 	if !strings.HasPrefix(s, "OK MPD") {
 		return fmt.Errorf("the server did not answer correctly, got %s instead", s)

@@ -39,7 +39,7 @@ func main() {
 
 	var client mpd.MPDConnection
 
-	err := client.Connect(networkType, *address, nil)
+	err := client.Connect(networkType, *address, 0)
 	if err != nil {
 		fmt.Printf("error while trying to connect to MPD [%s]\n", *address)
 		panic(err)
@@ -52,7 +52,7 @@ func main() {
 		r, err := client.Exec(cmd)
 		if err != nil {
 			fmt.Printf("error while trying to send authorization to MPD [%s]\n", *address)
-			panic(err)
+			fmt.Println(err)
 		}
 		printCommandOutput(cmd, r)
 	}
@@ -63,7 +63,7 @@ func main() {
 	r, err := client.Exec(cmd)
 	if err != nil {
 		fmt.Printf("error while trying to execute command to MPD [%s]\n", *address)
-		panic(err)
+		fmt.Println(err)
 	}
 	printCommandOutput(cmd, r)
 }

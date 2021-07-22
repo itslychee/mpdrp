@@ -26,24 +26,31 @@ func init() {
 func main() {
 	address := flag.String("address", "", "address to connect to MPD with, if -address is not provided then mpdrp will try to connect by a predefined list of defaults")
 	password := flag.String("password", "", "password to authorize with in order to use MPD")
-	timeoutSeconds := flag.Uint("timeout", 0, "the connection timeout value used by mpdrp when connecting to mpd")
 	forcePassword := flag.Bool("forcepassword", false, "use the provided -password if present, even if there's a password set in MPD_HOST")
+
+	var timeout time.Duration
+	flag.Func("timeout", "timeout in seconds", func(s string) error {
+		if i, err := strconv.ParseInt(s, 10, 64); err != nil {
+			return err
+		} else {
+			timeout = time.Second * time.Duration(i)
+			return nil
+		}
+
+	})
+
+	flag.Parse()
 
 	var mpdAddresses []net.Addr
 	var mpc = new(mpd.MPDConnection)
 	var discord = ipc.NewDiscordPresence("856926322437521428")
 
-	var timeout *time.Duration
-	if mpd_timeout := os.Getenv("MPD_TIMEOUT"); mpd_timeout != "" {
-		val, err := strconv.ParseUint(mpd_timeout, 10, 64)
-		if err != nil {
-			log.Printf("could not parse environment variable MPD_TIMEOUT value: %s\n", mpd_timeout)
-			panic(err)
+	if v, ok := os.LookupEnv("MPD_TIMEOUT"); ok && timeout == 0 {
+		if i, err := strconv.ParseInt(v, 10, 64); err != nil {
+			log.Fatalln(err)
+		} else {
+			timeout = time.Second * time.Duration(i)
 		}
-		*timeout = time.Duration(val * uint64(time.Second))
-	}
-	if *timeoutSeconds > 1 {
-		*timeout = time.Duration(*timeoutSeconds * uint(time.Second))
 	}
 
 	// If *address is not an empty string, then we will only add *address to
@@ -121,7 +128,6 @@ func main() {
 		}
 	}
 	defer mpc.Close()
-
 	if *password != "" {
 		cmd := mpd.Command{
 			Name: "password",
