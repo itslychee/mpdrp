@@ -8,7 +8,7 @@ import (
 	"github.com/ItsLychee/mpdrp/mpd"
 )
 
-func printCommandOutput(command mpd.Command, r *mpd.Response) {
+func formatResponse(command mpd.Command, r *mpd.Response) {
 	fmt.Println(command.String())
 	for k, v := range r.Records {
 		fmt.Printf("%s: %s\n", k, v)
@@ -54,7 +54,7 @@ func main() {
 			fmt.Printf("error while trying to send authorization to MPD [%s]\n", *address)
 			fmt.Println(err)
 		}
-		printCommandOutput(cmd, r)
+		formatResponse(cmd, r)
 	}
 	cmd := mpd.Command{
 		Name: flag.Arg(0),
@@ -65,5 +65,5 @@ func main() {
 		fmt.Printf("error while trying to execute command to MPD [%s]\n", *address)
 		fmt.Println(err)
 	}
-	printCommandOutput(cmd, r)
+	formatResponse(cmd, r)
 }
