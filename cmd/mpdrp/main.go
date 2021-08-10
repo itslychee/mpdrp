@@ -27,9 +27,10 @@ func main() {
 	address := flag.String("address", "", "address to connect to MPD with, if -address is not provided then mpdrp will try to connect by a predefined list of defaults")
 	password := flag.String("password", "", "password to authorize with in order to use MPD")
 	forcePassword := flag.Bool("forcepassword", false, "use the provided -password if present, even if there's a password set in MPD_HOST")
+	retry := flag.Bool("retry", false, "mpdrp retries to (re)connect to Discord and MPD with a grace period of x seconds")
 
 	var timeout time.Duration
-	flag.Func("timeout", "timeout in seconds", func(s string) error {
+	flag.Func("timeout", "how long mpdrp should wait for a connection before quitting", func(s string) error {
 		if i, err := strconv.ParseInt(s, 10, 64); err != nil {
 			return err
 		} else {
@@ -113,17 +114,22 @@ func main() {
 		mpdAddresses = append(mpdAddresses, val)
 	}
 
-	log.Printf("Attempting to establish a connection to MPD with %d address(es)\n", len(mpdAddresses))
+connection:
+	gracePeriod := time.Second * 2
+	log.Printf("attempting to establish a connection to MPD with %d address(es)\n", len(mpdAddresses))
 	// Connect to MPD
 	for index, val := range mpdAddresses {
-		err := mpc.Connect(val.Network(), val.String(), timeout)
-		if err == nil {
+		if err := mpc.Connect(val.Network(), val.String(), timeout); err == nil {
 			break
 		} else {
 			log.Println("unable to connect to mpd address: ", val.String())
 			log.Println(err)
 		}
-		if index == len(mpdAddresses) {
+		if index == len(mpdAddresses)-1 {
+			// connection logic
+			if *retry {
+				goto connection
+			}
 			log.Fatalln("mpdrp cannot find a suitable address to connect to MPD with")
 		}
 	}
@@ -142,18 +148,33 @@ func main() {
 
 	if err := discord.Connect(); err != nil {
 		log.Println("error while trying to connect to Discord")
+		// connection logic
+		if *retry {
+			log.Println(err)
+			time.Sleep(gracePeriod)
+			goto connection
+		}
 		panic(err)
 	}
 	defer discord.Disconnect()
 
 	if err := discord.CreateHandshake(); err != nil {
-		log.Println("discord handshake failed")
+		log.Println("sending discord handshake failed")
+		if *retry {
+			log.Println(err)
+			time.Sleep(gracePeriod)
+			goto connection
+		}
 		panic(err)
 	}
+
+	if err := updateRichPresence(discord, mpc); *retry && err != nil {
+		log.Println(err)
+		time.Sleep(gracePeriod)
+		goto connection
+	}
+
 	updateDelay := time.Second * 15
-
-	updateRichPresence(discord, mpc)
-
 	for {
 		// This is to ensure that Discord won't ratelimit us while ensuring
 		// MPD won't timeout on us as well
@@ -166,7 +187,11 @@ func main() {
 		}
 		// Thankfully, idle disables timeouts during its execution
 		mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}})
-		updateRichPresence(discord, mpc)
+		if err := updateRichPresence(discord, mpc); *retry && err != nil {
+			log.Println(err)
+			time.Sleep(gracePeriod)
+			goto connection
+		}
 
 	}
 
@@ -187,7 +212,7 @@ func resolveAddr(address string) (net.Addr, error) {
 
 }
 
-func updateRichPresence(ipcSocket *ipc.DiscordPresence, mpc *mpd.MPDConnection) {
+func updateRichPresence(ipcSocket *ipc.DiscordPresence, mpc *mpd.MPDConnection) error {
 	r, err := mpc.Exec(mpd.Command{Name: "status"}, mpd.Command{Name: "currentsong"})
 	if err != nil {
 		log.Panic(err)
@@ -244,7 +269,7 @@ func updateRichPresence(ipcSocket *ipc.DiscordPresence, mpc *mpd.MPDConnection) 
 	}
 
 	if _, _, err = ipcSocket.SetActivity(payload); err != nil {
-		panic(err)
+		return err
 	}
 	data, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
@@ -252,4 +277,5 @@ func updateRichPresence(ipcSocket *ipc.DiscordPresence, mpc *mpd.MPDConnection) 
 	}
 
 	log.Printf("Sent presence update payload\n%s", data)
+	return nil
 }
