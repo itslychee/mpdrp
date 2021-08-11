@@ -27,8 +27,8 @@ type Arguments struct {
 }
 
 type Activity struct {
-	State      *string      `json:"state,omitempty"`
-	Details    *string      `json:"details,omitempty"`
+	State      *string     `json:"state,omitempty"`
+	Details    *string     `json:"details,omitempty"`
 	Timestamps *Timestamps `json:"timestamps,omitempty"`
 	Assets     *Assets     `json:"assets,omitempty"`
 }
