@@ -18,7 +18,7 @@ this easy due to UAC and the execution policy of PowerShell scripts being locked
 You may need administrative privileges to execute these commands
 
 ```powershell
-# Add program to autostart
+# Add program to autostart, optionally add the desired program flags
 $ reg add HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run /v MPDRP /d "C:\An\Absolute\Path\Here.exe"
 
 # Remove it
