@@ -11,8 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const MAX_FRAME_SIZE = 64 * 1024
-
 func (c *DiscordPresence) Disconnect() error {
 	_, err := c.Send(Close, Payload{})
 	if err != nil {
