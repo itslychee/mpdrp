@@ -186,7 +186,12 @@ connection:
 			time.Sleep(time.Second * 5)
 		}
 		// Thankfully, idle disables timeouts during its execution
-		mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}})
+		if r, err := mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}}); err != nil {
+			log.Println(err)
+			log.Println(r.Data)
+			time.Sleep(gracePeriod)
+			goto connection			
+		}
 		if err := updateRichPresence(discord, mpc); *retry && err != nil {
 			log.Println(err)
 			time.Sleep(gracePeriod)

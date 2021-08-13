@@ -72,7 +72,7 @@ func (c *DiscordPresence) Send(opcode OpCode, payload Payload) ([]byte, error) {
 	_, length := binary.LittleEndian.Uint32(prelude[:4]), binary.LittleEndian.Uint32(prelude[4:])
 	d := make([]byte, length)
 	if _, err := c.Read(d); err != nil {
-		return nil, err
+ 		return nil, err
 	}
 	return d, nil
 }
