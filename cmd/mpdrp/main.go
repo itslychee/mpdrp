@@ -39,7 +39,6 @@ func main() {
 		}
 
 	})
-
 	flag.Parse()
 
 	var mpdAddresses []net.Addr
@@ -202,9 +201,7 @@ connection:
 
 }
 
-func resolveAddr(address string) (net.Addr, error) {
-	var addr net.Addr
-	var err error
+func resolveAddr(address string) (addr net.Addr, err error) {
 	switch {
 	case strings.HasPrefix(address, "@/"):
 		addr, err = net.ResolveUnixAddr("unixgram", address)
@@ -213,7 +210,7 @@ func resolveAddr(address string) (net.Addr, error) {
 	default:
 		addr, err = net.ResolveTCPAddr("tcp", address)
 	}
-	return addr, err
+	return
 
 }
 
