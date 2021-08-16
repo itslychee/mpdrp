@@ -1,4 +1,4 @@
-package ipc
+package discord
 
 import "errors"
 

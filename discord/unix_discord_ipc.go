@@ -1,6 +1,6 @@
 // +build darwin linux
 
-package ipc
+package discord
 
 import (
 	"errors"

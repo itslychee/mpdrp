@@ -1,4 +1,4 @@
-package ipc
+package discord
 
 type OpCode uint32
 
