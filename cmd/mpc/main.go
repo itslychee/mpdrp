@@ -64,6 +64,8 @@ func main() {
 	if err != nil {
 		fmt.Printf("error while trying to execute command to MPD [%s]\n", *address)
 		fmt.Println(err)
+
+	} else {
+		formatResponse(cmd, r)
 	}
-	formatResponse(cmd, r)
 }
