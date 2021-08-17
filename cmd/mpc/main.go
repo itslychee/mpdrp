@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ItsLychee/mpdrp/mpd"
@@ -51,18 +52,23 @@ func main() {
 		}
 		r, err := client.Exec(cmd)
 		if err != nil {
-			fmt.Printf("error while trying to send authorization to MPD [%s]\n", *address)
 			fmt.Println(err)
 		}
 		formatResponse(cmd, r)
 	}
+	if len(flag.Args()) == 0 {
+		fmt.Println("no command supplied")
+		os.Exit(-1)
+
+	}
+
+
 	cmd := mpd.Command{
 		Name: flag.Arg(0),
 		Args: flag.Args()[1:],
 	}
 	r, err := client.Exec(cmd)
 	if err != nil {
-		fmt.Printf("error while trying to execute command to MPD [%s]\n", *address)
 		fmt.Println(err)
 
 	} else {
