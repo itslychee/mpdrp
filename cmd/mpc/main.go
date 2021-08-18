@@ -50,7 +50,7 @@ func main() {
 			Name: "password",
 			Args: []string{*password},
 		}
-		r, err := client.Exec(cmd)
+		err, r := client.Exec(cmd)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -59,7 +59,6 @@ func main() {
 	if len(flag.Args()) == 0 {
 		fmt.Println("no command supplied")
 		os.Exit(-1)
-
 	}
 
 
@@ -67,10 +66,9 @@ func main() {
 		Name: flag.Arg(0),
 		Args: flag.Args()[1:],
 	}
-	r, err := client.Exec(cmd)
+	err, r := client.Exec(cmd)
 	if err != nil {
 		fmt.Println(err)
-
 	} else {
 		formatResponse(cmd, r)
 	}

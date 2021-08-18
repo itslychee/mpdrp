@@ -44,10 +44,6 @@ type ResponseError struct {
 	Message   string
 }
 
-func (r ResponseError) formatError() string {
-	return fmt.Sprintf("error: [%d] %s", r.ErrorEnum, r.Message)
-}
-
 func (r ResponseError) Error() string {
-	return r.formatError()
+	return fmt.Sprintf("error: [%d] %s", r.ErrorEnum, r.Message)
 }
