@@ -7,14 +7,39 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ItsLychee/mpdrp/discord"
 	"github.com/ItsLychee/mpdrp/mpd"
 )
 
-func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) {
-	
-	
+func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {
+	// status: Get the player's current positioning
+	// currentsong: Get the metadata of the song
+	err, r := mpc.Exec(mpd.Command{Name: "currentsong"}, mpd.Command{Name: "status"})
+	if err != nil {
+		return err
+	}
+
+	// Parse the records "elapsed" and "duration" to a native Go uint64
+	duration, err := strconv.ParseUint(r.Records["duration"], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	elapsed, err := strconv.ParseUint(r.Records["elapsed"], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	now := time.Now()
+	songEnd := now.Add(time.Duration(duration - elapsed))
+	f.WriteString(songEnd.String())
+
+	switch r.Records["state"] {
+	// set parameters for the following rich presence update
+	}
+
+	return nil	
 }
 
 
@@ -29,7 +54,7 @@ func getDefaultAddresses() (addresses []Addr, err error) {
 	}
 
 	if runtime.GOOS != "windows" {
-		if er, addr := resolveAddr(filepath.Join(getenv("XDG_RUNTIME_DIR", "/run"), "mpd/socket")); er != nil {
+		if addr, er := resolveAddr(filepath.Join(getenv("XDG_RUNTIME_DIR", "/run"), "mpd/socket")); er != nil {
 			err = er
 			return
 		} else {
@@ -59,13 +84,13 @@ func getDefaultAddresses() (addresses []Addr, err error) {
 
 	var address Addr
 	if strings.HasPrefix(mpdHost, "@/") || strings.HasPrefix(mpdHost, "/") {
-		err, address = resolveAddr(mpdHost)
+		address, err = resolveAddr(mpdHost)
 		if err != nil {
 			return
 		}
 
 	} else {
-		err, address = resolveAddr(net.JoinHostPort(mpdHost, mpdPort))
+		address, err = resolveAddr(net.JoinHostPort(mpdHost, mpdPort))
 		if err != nil {
 			return
 		}
@@ -83,7 +108,7 @@ type Addr struct {
 }
 
 
-func resolveAddr(address string) (err error, addr Addr) {
+func resolveAddr(address string) (addr Addr, err error) {
 	switch {
 	case strings.HasPrefix(address, "@/"):
 		addr.address, err = net.ResolveUnixAddr("unixgram", address)
