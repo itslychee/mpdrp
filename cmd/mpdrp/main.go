@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	logging "log"
 	"os"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 )
 
 var log *logging.Logger = logging.New(os.Stderr, "] ", logging.Lmsgprefix|logging.LstdFlags)
+// This variable will ideally be reassigned by the linker
+var Version string = "n/a"
 
 func main() {
 	address := flag.String("address", "", "MPD's address, if left unset then the program will try a list of defaults")
@@ -21,7 +24,13 @@ func main() {
 	retry := flag.Bool("retry", false, "Always reconnect to MPD and/or Discord if one of their connections get dropped")
 	retryDelay := flag.Duration("retry-delay", time.Duration(time.Second*5), "Grace period between reconnections, this flag is useless without -retry being passed")
 	clientID := flag.Int64("client-id", 856926322437521428, "Client ID that MPDRP will use, it's best not to ignorantly pass this flag")
+	version := flag.Bool("version", false, "Display MPDRP's version and exit")
 	flag.Parse()
+
+	if *version {
+		fmt.Println("mpdrp version:", Version)
+		os.Exit(0)
+	}
 
 	// Account for no playing songs
 	var addressPool []Addr
