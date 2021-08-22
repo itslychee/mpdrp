@@ -12,11 +12,14 @@ import (
 )
 
 func (c *DiscordPresence) Close() error {
-	_, err := c.Send(Close, Payload{})
-	if err != nil {
-		return err
+	if c.conn != nil {
+		_, err := c.Send(Close, Payload{})
+		if err != nil {
+			return err
+		}
+		return c.conn.Close()
 	}
-	return c.conn.Close()
+	return nil
 }
 
 func (c *DiscordPresence) CreateHandshake() error {
@@ -72,7 +75,7 @@ func (c *DiscordPresence) Send(opcode OpCode, payload Payload) ([]byte, error) {
 	_, length := binary.LittleEndian.Uint32(prelude[:4]), binary.LittleEndian.Uint32(prelude[4:])
 	d := make([]byte, length)
 	if _, err := c.Read(d); err != nil {
- 		return nil, err
+		return nil, err
 	}
 	return d, nil
 }

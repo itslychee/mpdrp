@@ -34,7 +34,7 @@ func (mpd *MPDConnection) Connect(network, address string, timeout time.Duration
 	return nil
 }
 
-func (mpd *MPDConnection) Exec(cmds ...Command) (error, *Response) {
+func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 	// Command execution
 	sid := mpd.conn.Next()
 
@@ -46,7 +46,7 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (error, *Response) {
 	}
 	mpd.conn.W.WriteString("command_list_end\n")
 	if err := mpd.conn.W.Flush(); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	mpd.conn.EndRequest(sid)
@@ -61,14 +61,14 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (error, *Response) {
 		s, err := mpd.conn.R.ReadString(0x0A)
 		s = strings.TrimSpace(s)
 		if err != nil {
-			return err, response
+			return response, err 
 		}
 
 		switch {
 		case strings.HasPrefix(s, "OK"):
 			// As defined by the spec, this is where we should stop reading
 			response.eol = []byte(s)
-			return nil, response
+			return response, nil
 		case strings.HasPrefix(s, "ACK"):
 			// TODO: Add logging
 
@@ -100,7 +100,7 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (error, *Response) {
 				Command:   string(res[3]),
 				Message:   string(res[4]),
 			}
-			return respErr, nil
+			return nil, respErr
 		default:
 			fields := strings.SplitN(string(s), ":", 2)
 			fields[1] = strings.TrimSpace(fields[1])
@@ -126,5 +126,8 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (error, *Response) {
 }
 
 func (mpd *MPDConnection) Close() error {
-	return mpd.conn.Close()
+	if mpd.conn != nil {
+		return mpd.conn.Close()
+	}
+	return nil
 }
