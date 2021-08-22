@@ -27,9 +27,10 @@ func main() {
 	var addressPool []Addr
 	if *address != "" {
 		if addr, err := resolveAddr(*address); err != nil {
-			addressPool = append(addressPool, addr)
-		} else {
 			panic(err)
+			
+		} else {
+			addressPool = append(addressPool, addr)
 		}
 	} else {
 		if addrs, err := getDefaultAddresses(); err != nil {
