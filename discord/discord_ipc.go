@@ -31,7 +31,7 @@ func (c *DiscordPresence) CreateHandshake() error {
 	return err
 }
 
-func (c *DiscordPresence) SetActivity(activity Activity) (string, []byte, error) {
+func (c *DiscordPresence) SetActivity(activity *Activity) (string, []byte, error) {
 	nonce, err := uuid.NewRandom()
 	if err != nil {
 		return "", nil, err
@@ -40,7 +40,7 @@ func (c *DiscordPresence) SetActivity(activity Activity) (string, []byte, error)
 		Cmd: "SET_ACTIVITY",
 		Args: &Arguments{
 			Pid:      os.Getpid(),
-			Activity: &activity,
+			Activity: activity,
 		},
 		Nonce: nonce.String(),
 	}
