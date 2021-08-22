@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,27 +22,67 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return err
 	}
 
-	// Parse the records "elapsed" and "duration" to a native Go uint64
-	duration, err := strconv.ParseUint(r.Records["duration"], 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	elapsed, err := strconv.ParseUint(r.Records["elapsed"], 10, 64)
-	if err != nil {
-		panic(err)
+	if len(r.Records) == 0 {
+		fmt.Println("empty")
+		return nil
 	}
 
-	now := time.Now()
-	songEnd := now.Add(time.Duration(duration - elapsed))
-	f.WriteString(songEnd.String())
+	artistAlbum := []string{}
+	if album := r.Records["Album"]; album != "" {
+		artistAlbum = append(artistAlbum, album)
+	}
+	if artist := r.Records["Artist"]; artist != "" {
+		artistAlbum = append(artistAlbum, artist)
+	}
+
+	details := "??"
+	state := strings.Join(artistAlbum, " - ")
+	if r.Records["Artist"] != "" {
+		details = r.Records["Artist"]
+	}
+
+	var payload = discord.Activity{
+		State:   &state,
+		Details: &details,
+		Assets: &discord.Assets{
+			LargeImage: "mpd_logo",
+			LargeText:  "Music Player Daemon",
+		},
+		Timestamps: nil,
+	}
 
 	switch r.Records["state"] {
-	// set parameters for the following rich presence update
+	case "play":
+		var duration, elapsed float64
+		if duration, err = strconv.ParseFloat(r.Records["duration"], 64); err != nil {
+			panic(err)
+		}
+		if elapsed, err = strconv.ParseFloat(r.Records["elapsed"], 64); err != nil {
+			panic(err)
+		}
+
+		now := time.Now()
+		songEnd := now.Add(time.Second * time.Duration(duration-elapsed))
+
+		payload.Details = &details
+		payload.Timestamps = &discord.Timestamps{
+			End: int(songEnd.Unix()),
+		}
+		payload.Assets.SmallImage = "mpd_play"
+		payload.Assets.SmallText = "Playing"
+	case "pause":
+		payload.Assets.SmallImage = "mpd_pause"
+		payload.Assets.SmallText = "Paused"
+	case "stop":
+		details = "Stopped"
+		payload.Details = &details
+		payload.State = nil
+		payload.Assets.SmallText = *payload.Details
+		payload.Assets.SmallImage = "mpd_stop"
 	}
-
-	return nil	
+	_, _, err = ipc.SetActivity(payload)
+	return err
 }
-
 
 func getDefaultAddresses() (addresses []Addr, err error) {
 	// A handy function for env var defaults
@@ -107,7 +148,6 @@ type Addr struct {
 	password string
 }
 
-
 func resolveAddr(address string) (addr Addr, err error) {
 	switch {
 	case strings.HasPrefix(address, "@/"):
@@ -118,5 +158,4 @@ func resolveAddr(address string) (addr Addr, err error) {
 		addr.address, err = net.ResolveTCPAddr("tcp", address)
 	}
 	return
-
 }
