@@ -18,7 +18,7 @@ set /p option="Choose option: "
 set Bpath=
 
 IF "%option%" == "1" (
-    set /p Bpath="Executable path: "
+    set /p Bpath="[Path to executable]: "
     sc create mpdrp binPath= "!Bpath!" start= delayed-auto
     sc description mpdrp "A Discord Rich Presence for MPD (https://musicpd.org)"
 ) ELSE IF "%option%" == "2" (
