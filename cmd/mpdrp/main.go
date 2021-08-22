@@ -1,48 +1,18 @@
 package main
 
 import (
+	"errors"
 	"flag"
-	"log"
+	logging "log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/ItsLychee/mpdrp/discord"
 	"github.com/ItsLychee/mpdrp/mpd"
-	"golang.org/x/sys/windows/svc"
 )
 
-type windowsHandler struct {
-	ipc chan svc.Status
-}
-
-func (w windowsHandler) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
-	// s <- svc.Status{State: svc.StartPending}
-	s <- svc.Status{
-		State:   svc.Running,
-		Accepts: svc.AcceptShutdown | svc.AcceptStop,
-	}
-
-loop:
-	for {
-		select {
-		case cr := <-r:
-			switch cr.Cmd {
-			case svc.Interrogate:
-				s <- cr.CurrentStatus
-				time.Sleep(100 * time.Millisecond)
-				s <- cr.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				s <- svc.Status{State: svc.StopPending}
-				break loop
-			}
-		case signal := <-w.ipc:
-			s <- signal
-		}
-	}
-	s <- svc.Status{State: svc.StopPending}
-	return
-}
+var log *logging.Logger = logging.New(os.Stderr, "] ", logging.Lmsgprefix|logging.LstdFlags)
 
 func main() {
 	address := flag.String("address", "", "MPD's address, if left unset then the program will try a list of defaults")
@@ -53,26 +23,7 @@ func main() {
 	clientID := flag.Int64("client-id", 856926322437521428, "Client ID that MPDRP will use, it's best not to ignorantly pass this flag")
 	flag.Parse()
 
-	isManaged, err := svc.IsWindowsService()
-	if err != nil {
-		panic(err)
-	}
-	// This enables use of Windows Services, which most users
-	// will most likely use
-	if isManaged {
-		win := windowsHandler{}
-		go func() {
-			if err = svc.Run("mpdrp", win); err != nil {
-				panic(err)
-			}
-		}()
-		defer func() {
-			win.ipc <- svc.Status{State: svc.StopPending}
-			// Let Windows' SCM know that we're exiting, just in case
-		}()
-	}
 	// Account for no playing songs
-
 	var addressPool []Addr
 	if *address != "" {
 		if addr, err := resolveAddr(*address); err != nil {
@@ -90,37 +41,45 @@ func main() {
 	// Connection structs
 	var mpc = new(mpd.MPDConnection)
 	var ipc = discord.NewDiscordPresence(strconv.FormatInt(*clientID, 10))
-	for index := 0 ;; index++{
-		if index > 0 && !*retry {
-			os.Exit(-1)
-		}
 
+connection_loop:
+	for index := 0; index < 1 || *retry; index++ {
+		if index >= 1 {
+			// For the sake of simplicity, I'm just going to 
+			// close both of these connections (assuming if one of them aren't)
+			// 
+			// Perhaps in the near future I'll make this process smarter and only reconnect 
+			// as needed?
+			mpc.Close()
+			ipc.Close()
+
+			// Sleep so mpdrp won't consume the entirety of your CPU!
+			time.Sleep(*retryDelay)
+		}
+		
 		log.Printf("attempting to connect to %d address(es)\n", len(addressPool))
 		for index, val := range addressPool {
-			err = mpc.Connect(val.address.Network(), val.address.String(), *timeout) 
+			err := mpc.Connect(val.address.Network(), val.address.String(), *timeout)
 			if err == nil {
 				log.Printf("mpd: connected to %s/%s\n", val.address.Network(), val.address.String())
 				break
 			}
 			log.Printf("mpd: could not connect to %s\n%s\n", val.address.String(), err)
-			if index == len(addressPool) - 1 {
-				log.Printf("mpd: could not connect to a viable address\n%s\n", err)
-				time.Sleep(*retryDelay)
-				continue
+			if index == len(addressPool)-1 {
+				log.Printf("mpd: could not connect to a viable address")
+				continue connection_loop
 			}
 		}
 
 		if *password != "" {
 			if err, _ := mpc.Exec(mpd.Command{Name: "password", Args: []string{*password}}); err != nil {
-				log.Fatalf("mpd: incorrect password\n%s\n", err)
+				log.Fatalf("mpd: incorrect password: %s\n", err)
 			}
 			log.Println("mpd: successfully authenticated to mpd")
 		}
 
-		
 		if err := ipc.Connect(); err != nil {
 			log.Printf("discord: %s\n", err)
-			time.Sleep(*retryDelay)
 			continue
 		} else {
 			log.Println("discord: connected to ipc pipe")
@@ -128,31 +87,35 @@ func main() {
 
 		if err := ipc.CreateHandshake(); err != nil {
 			log.Printf("discord: %s\n", err)
-			time.Sleep(*retryDelay)
 			continue
 		} else {
 			log.Println("discord: successfully sent handshake")
-		}		
+		}
 
 		for {
 			if err := updateRichPresence(mpc, ipc); err != nil {
-				log.Printf("discord: error while updating activity:\n%s\n", err)
+				log.Println("discord: error while updating activity: ", err)
+				continue connection_loop
 			}
 			for nt := time.Now(); time.Now().Unix() < nt.Add(time.Second*15).Unix(); {
-				if err, _ := mpc.Exec(mpd.Command{Name: "ping"}); err != nil {
-					panic(err)
+				if _, err := mpc.Exec(mpd.Command{Name: "ping"}); err != nil {
+					if errors.Is(err, mpd.ResponseError{}) {
+						log.Fatalln(err)
+					}
+					continue connection_loop
 				}
 				time.Sleep(time.Second * 5)
 			}
-			err, _ := mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}})
-			if err != nil {
-				log.Fatalf("mpd: error while idling:\n%s\n", err)
+
+			if _, err := mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}}); err != nil {
+				if errors.Is(err, mpd.ResponseError{}) {
+					log.Fatalln(err)
+				}
+				continue connection_loop
 			}
 
-			
 		}
 
 	}
-
-
+	os.Exit(1)
 }

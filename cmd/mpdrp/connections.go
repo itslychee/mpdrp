@@ -17,7 +17,7 @@ import (
 func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {
 	// status: Get the player's current positioning
 	// currentsong: Get the metadata of the song
-	err, r := mpc.Exec(mpd.Command{Name: "currentsong"}, mpd.Command{Name: "status"})
+	r, err := mpc.Exec(mpd.Command{Name: "currentsong"}, mpd.Command{Name: "status"})
 	if err != nil {
 		return err
 	}
@@ -27,12 +27,12 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return nil
 	}
 
-	artistAlbum := []string{}
+	artistAlbum := []string{"??", "??"}
 	if album := r.Records["Album"]; album != "" {
-		artistAlbum = append(artistAlbum, album)
+		artistAlbum[0] = album
 	}
 	if artist := r.Records["Artist"]; artist != "" {
-		artistAlbum = append(artistAlbum, artist)
+		artistAlbum[1] = artist
 	}
 
 	details := "??"
