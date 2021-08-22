@@ -28,17 +28,17 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 	}
 
 	artistAlbum := []string{"??", "??"}
-	if album := r.Records["Album"]; album != "" {
-		artistAlbum[0] = album
-	}
 	if artist := r.Records["Artist"]; artist != "" {
-		artistAlbum[1] = artist
+		artistAlbum[0] = artist
+	}
+	if album := r.Records["Album"]; album != "" {
+		artistAlbum[1] = album
 	}
 
 	details := "??"
 	state := strings.Join(artistAlbum, " - ")
 	if r.Records["Artist"] != "" {
-		details = r.Records["Artist"]
+		details = r.Records["Title"]
 	}
 
 	var payload = discord.Activity{
