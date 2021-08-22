@@ -41,7 +41,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		details = r.Records["Title"]
 	}
 
-	var payload = discord.Activity{
+	var payload = &discord.Activity{
 		State:   &state,
 		Details: &details,
 		Assets: &discord.Assets{
@@ -74,11 +74,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		payload.Assets.SmallImage = "mpd_pause"
 		payload.Assets.SmallText = "Paused"
 	case "stop":
-		details = "Stopped"
-		payload.Details = &details
-		payload.State = nil
-		payload.Assets.SmallText = *payload.Details
-		payload.Assets.SmallImage = "mpd_stop"
+		payload = nil
 	}
 	_, _, err = ipc.SetActivity(payload)
 	return err
