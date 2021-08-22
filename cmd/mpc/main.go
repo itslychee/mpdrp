@@ -50,7 +50,7 @@ func main() {
 			Name: "password",
 			Args: []string{*password},
 		}
-		err, r := client.Exec(cmd)
+		r, err := client.Exec(cmd)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -66,7 +66,7 @@ func main() {
 		Name: flag.Arg(0),
 		Args: flag.Args()[1:],
 	}
-	err, r := client.Exec(cmd)
+	r, err := client.Exec(cmd)
 	if err != nil {
 		fmt.Println(err)
 	} else {
