@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (c *DiscordPresence) Disconnect() error {
+func (c *DiscordPresence) Close() error {
 	_, err := c.Send(Close, Payload{})
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (c *DiscordPresence) Send(opcode OpCode, payload Payload) ([]byte, error) {
 func (c *DiscordPresence) Write(b []byte) (n int, err error) {
 	n, err = c.conn.Write(b)
 	if errors.Is(err, io.EOF) {
-		c.Disconnect()
+		c.Close()
 	}
 	return
 }
@@ -88,7 +88,7 @@ func (c *DiscordPresence) Write(b []byte) (n int, err error) {
 func (c *DiscordPresence) Read(b []byte) (n int, err error) {
 	n, err = c.conn.Read(b)
 	if errors.Is(err, io.EOF) {
-		c.Disconnect()
+		c.Close()
 	}
 	return
 }
