@@ -32,6 +32,16 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *timeout == 0 {
+		if val, ok := os.LookupEnv("MPD_TIMEOUT"); ok {
+			v, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+			*timeout = time.Duration(v) * time.Second
+		}
+	}
+
 	// Account for no playing songs
 	var addressPool []Addr
 	if *address != "" {
