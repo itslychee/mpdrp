@@ -2,3 +2,6 @@
 *.o
 *.exe
 *.dll
+
+// Build directory
+build/
