@@ -15,13 +15,13 @@ do
     # Additional assets can be added below
     case $GOOS in
         windows)
-            cp config/autostart-setup.bat build/windows
+            cp config/mpdrp.bat build/windows/
             ;;
         linux)
-            cp config/mpdrp.service build/linux
+            cp config/mpdrp.service build/linux/
             ;;
         darwin)
-            cp config/mpdrp.plist build/darwin
+            cp config/mpdrp.plist build/darwin/
             ;;
     esac
     # Finally, pack it up
