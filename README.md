@@ -23,6 +23,32 @@ $ ./mpdrp -retry --retry-delay 1s --address 127.0.0.1:1234 --password "password!
 // ...
 ```
 
+# Autostart
+
+It's ideal that the program shouldn't be manually started by the user, so I've attempted to create decent scripts. For Linux and OSX users, you
+will have to change it up to meet your needs.
+
+## Windows
+
+Open up the folder and execute `mpdrp.bat` while following its instructions.
+
+## OSX
+
+- Open up the folder
+- Move `mpdrp.plist` to `/Library/LaunchAgents/`
+- Open up your Terminal
+- Enter `launchctl load /Library/LaunchAgents/mpdrp.plist`
+- Finally, enter `launchctl start com.itslychee.mpdrp` and it should be running
+
+As I don't have a Mac, I cannot assure you that the program or the plist file provided will work as expected. So, if something doesn't look right 
+to you, please make a PR or an issue. I would highly be appreciative!
+
+## Linux
+
+For systemd users, you will need to copy `mpdrp.service` in the extracted tarball folder. I recommend using `systemd-user` for MPDRP as it is locally based
+and as such, it doesn't require root. For other process managers, you're expected to know how to create one yourself, or feel free to create a PR that improves/adds on to
+the current release configuration.
+
 ## Screenshots
 
 Find them in the `/assets` directory of the repository, their filenames will start with `showcase`. I mainly done this to make the

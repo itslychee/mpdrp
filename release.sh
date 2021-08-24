@@ -20,6 +20,9 @@ do
         linux)
             cp config/mpdrp.service build/linux
             ;;
+        darwin)
+            cp config/mpdrp.plist build/darwin
+            ;;
     esac
     # Finally, pack it up
     ARCHIVE_FILENAME="mpdrp-$GOOS-$(go env GOARCH).$EXTENSION"

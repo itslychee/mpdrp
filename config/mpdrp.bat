@@ -1,7 +1,6 @@
 @ECHO OFF
 
 SetLocal EnableDelayedExpansion
-@REM I hate Microsoft for this seemingly POINTLESS requirement
 
 IF NOT "%1"=="as_admin" (
     powershell -Command "Start-Process -FilePath %0 as_admin -Verb RunAs" 
@@ -21,6 +20,7 @@ IF "%option%" == "1" (
     set /p Bpath="[Path to executable]: "
     sc create mpdrp binPath= "!Bpath!" start= delayed-auto
     sc description mpdrp "A Discord Rich Presence for MPD (https://musicpd.org)"
+    sc start mpdrp
 ) ELSE IF "%option%" == "2" (
     sc stop mpdrp
     sc delete mpdrp
