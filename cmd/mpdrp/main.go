@@ -29,7 +29,7 @@ func main() {
 
 	if *version {
 		fmt.Println("mpdrp version:", Version)
-		os.Exit(0)
+		return
 	}
 
 	if *timeout == 0 {
@@ -137,5 +137,4 @@ connection_loop:
 		}
 
 	}
-	os.Exit(1)
 }
