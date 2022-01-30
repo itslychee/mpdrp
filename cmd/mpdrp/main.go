@@ -14,6 +14,7 @@ import (
 )
 
 var log *logging.Logger = logging.New(os.Stderr, "] ", logging.Lmsgprefix|logging.LstdFlags)
+
 // This variable will ideally be reassigned by the linker
 var Version string = "n/a"
 
@@ -47,7 +48,7 @@ func main() {
 	if *address != "" {
 		if addr, err := resolveAddr(*address); err != nil {
 			panic(err)
-			
+
 		} else {
 			addressPool = append(addressPool, addr)
 		}
@@ -65,18 +66,11 @@ func main() {
 connection_loop:
 	for index := 0; index < 1 || *retry; index++ {
 		if index >= 1 {
-			// For the sake of simplicity, I'm just going to 
-			// close both of these connections (assuming if one of them aren't)
-			// 
-			// Perhaps in the near future I'll make this process smarter and only reconnect 
-			// as needed?
 			mpc.Close()
 			ipc.Close()
-
-			// Sleep so mpdrp won't consume the entirety of your CPU!
 			time.Sleep(*retryDelay)
 		}
-		
+
 		log.Printf("attempting to connect to %d address(es)\n", len(addressPool))
 		for index, val := range addressPool {
 			err := mpc.Connect(val.address.Network(), val.address.String(), *timeout)
