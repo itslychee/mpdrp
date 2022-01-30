@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -22,9 +23,12 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return err
 	}
 
-	if len(r.Records) == 0 {
-		fmt.Println("empty")
-		return nil
+	if verbose != nil && *verbose {
+		var builder strings.Builder
+		for k, v := range r.Records {
+			builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+		}
+		builder.Write(r.OK())
 	}
 
 	artistAlbum := []string{"??", "??"}
@@ -47,6 +51,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		Assets: &discord.Assets{
 			LargeImage: "mpd_logo",
 			LargeText:  "Music Player Daemon",
+			SmallImage: "mpd_" + r.Records["state"],
 		},
 		Timestamps: nil,
 	}
@@ -60,24 +65,46 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		if elapsed, err = strconv.ParseFloat(r.Records["elapsed"], 64); err != nil {
 			panic(err)
 		}
-
-		now := time.Now()
-		songEnd := now.Add(time.Second * time.Duration(duration-elapsed))
-
-		payload.Details = &details
-		payload.Timestamps = &discord.Timestamps{
-			End: int(songEnd.Unix()),
-		}
-		payload.Assets.SmallImage = "mpd_play"
 		payload.Assets.SmallText = "Playing"
+		payload.Timestamps = &discord.Timestamps{
+			End: time.Now().Add(time.Second * time.Duration(duration-elapsed)).Unix(),
+		}
 	case "pause":
-		payload.Assets.SmallImage = "mpd_pause"
 		payload.Assets.SmallText = "Paused"
 	case "stop":
 		payload = nil
 	}
-	_, _, err = ipc.SetActivity(payload)
-	return err
+
+	if buf, err := json.MarshalIndent(payload, "", "  "); err != nil {
+		debug("error while indenting marshalled json:", err)
+	} else {
+		debug("TO BE SENT:\n", string(buf))
+	}
+
+	_, buf, err := ipc.SetActivity(payload)
+	if err != nil {
+		return err
+	}
+
+	var s = new(discord.Payload)
+	if err := json.Unmarshal(buf, s); err != nil {
+		debug("unmarshal error while unpacking received data:", err)
+		debug("RECEIVED:", string(buf))
+	} else {
+		b, err := json.MarshalIndent(s, "", "  ")
+		if err != nil {
+			debug("marshal indent error:", err)
+			debug("RECEIVED:", string(buf))
+		} else {
+			debug("RECEIVED:", string(b))
+		}
+	}
+
+	if s.Data != nil && s.Evt == "ERROR" {
+		return fmt.Errorf("ERROR: [%d] %s", s.Data.Code, s.Data.Message)
+	}
+
+	return nil
 }
 
 func getDefaultAddresses() (addresses []Addr, err error) {
