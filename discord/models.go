@@ -27,6 +27,7 @@ type Arguments struct {
 }
 
 type Activity struct {
+	Type	   int         `json:"type"`
 	State      *string     `json:"state,omitempty"`
 	Details    *string     `json:"details,omitempty"`
 	Timestamps *Timestamps `json:"timestamps,omitempty"`
@@ -34,8 +35,8 @@ type Activity struct {
 }
 
 type Timestamps struct {
-	Start int `json:"start,omitempty"`
-	End   int `json:"end,omitempty"`
+	Start int64 `json:"start,omitempty"`
+	End   int64 `json:"end,omitempty"`
 }
 
 type Assets struct {
