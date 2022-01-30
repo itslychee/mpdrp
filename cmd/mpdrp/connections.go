@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +17,20 @@ import (
 	"github.com/ItsLychee/mpdrp/discord"
 	"github.com/ItsLychee/mpdrp/mpd"
 )
+
+type MusicBrainzBase struct {
+	Releases []struct {
+		ID    string `json:"id"`
+		Score int `json:"score"`
+	} `json:"releases"`
+}
+
+type CoverArtBase struct {
+	Images []struct{
+		Image string `json:"image"`
+	} `json:"images"`
+}
+
 
 func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {
 	// status: Get the player's current positioning
@@ -77,7 +95,81 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		payload = nil
 	}
 	_, _, err = ipc.SetActivity(payload)
-	return err
+	if err != nil {
+		return err
+	}
+
+	query := map[string]string{}
+	if title := strings.TrimSpace(r.Records["Title"]); title != "" {
+		query["release"] = title
+	}
+	if artist := strings.TrimSpace(r.Records["AlbumArtist"]); artist != "" {
+		query["artistname"] = artist
+	}
+
+	baseUrl := "https://musicbrainz.org/ws/2/release"
+	var queryBuilder strings.Builder
+	for k, v := range query {
+		queryBuilder.WriteString(fmt.Sprintf("%s:\"%s\" ", k, v))
+	}
+
+	params := url.Values{
+		"fmt": []string{"json"},
+		"query": []string{queryBuilder.String()},
+	}
+
+	resp, err := http.Get(baseUrl + "?" + params.Encode())
+	log.Println(resp.Status, resp)
+	if err != nil || resp.StatusCode != 200 {
+		return err
+	}
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var data MusicBrainzBase
+	if err := json.Unmarshal(buf, &data); err != nil {
+		return err
+	}
+	if len(data.Releases) > 1 && data.Releases[0].Score <= 90 {
+		return err
+	}
+
+	resp, err = http.Get("https://coverartarchive.org/release/"+data.Releases[0].ID)
+	if resp.StatusCode != 200 || err != nil {
+		return err
+	}
+
+	buf, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	log.Println(string(buf))
+
+	var d CoverArtBase
+	if err := json.Unmarshal(buf, &d); err != nil {
+		return err
+	}
+
+	if len(d.Images) == 0 {
+		return nil
+	}
+
+	resp, err = http.Get(d.Images[0].Image)
+	if err != nil {
+		return err
+	}
+
+	payload.Assets.LargeImage = resp.Request.URL.String()
+	log.Println(payload.Assets.LargeImage)
+	_, _, err = ipc.SetActivity(payload)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func getDefaultAddresses() (addresses []Addr, err error) {
