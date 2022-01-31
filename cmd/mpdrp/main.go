@@ -18,14 +18,15 @@ var (
 	Version = "n/a"
 	log     = logging.New(os.Stderr, "] ", logging.Lmsgprefix|logging.LstdFlags)
 	// Flags
-	address    = flag.String("address", "", "MPD's address, if left unset then the program will try a list of defaults")
-	password   = flag.String("password", "", "Password to authenticate to MPD with")
-	timeout    = flag.Duration("timeout", time.Duration(0), "how long the program should wait for the connection to respond before quitting, unique to TCP-based MPD addresses")
-	retry      = flag.Bool("retry", false, "Always reconnect to MPD and/or Discord if one of their connections get dropped")
-	retryDelay = flag.Duration("retry-delay", time.Duration(time.Second*5), "Grace period between reconnections, this flag is useless without -retry being passed")
-	clientID   = flag.Int64("client-id", 856926322437521428, "Client ID that MPDRP will use, it's best not to ignorantly pass this flag")
-	version    = flag.Bool("version", false, "Display MPDRP's version and exit")
-	verbose    = flag.Bool("verbose", false, "MPDRP will be more transparent with what it does internally, know this will produce a lot of output")
+	address       = flag.String("address", "", "MPD's address, if left unset then the program will try a list of defaults")
+	password      = flag.String("password", "", "Password to authenticate to MPD with")
+	timeout       = flag.Duration("timeout", time.Duration(0), "how long the program should wait for the connection to respond before quitting, unique to TCP-based MPD addresses")
+	retry         = flag.Bool("retry", false, "Always reconnect to MPD and/or Discord if one of their connections get dropped")
+	retryDelay    = flag.Duration("retry-delay", time.Duration(time.Second*5), "Grace period between reconnections, this flag is useless without -retry being passed")
+	clientID      = flag.Int64("client-id", 856926322437521428, "Client ID that MPDRP will use, it's best not to ignorantly pass this flag")
+	version       = flag.Bool("version", false, "Display MPDRP's version and exit")
+	verbose       = flag.Bool("verbose", false, "MPDRP will be more transparent with what it does internally, know this will produce a lot of output")
+	noAlbumCovers = flag.Bool("no-album-covers", false, "Disables MPDRP from making HTTP requests to retrieve an album cover URL which is set to your Rich Presence's LargeImage field")
 )
 
 func debug(v ...interface{}) {

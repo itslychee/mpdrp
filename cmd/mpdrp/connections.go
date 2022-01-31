@@ -120,6 +120,11 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return fmt.Errorf("ERROR: [%d] %s", s.Data.Code, s.Data.Message)
 	}
 
+	if noAlbumCovers != nil && *noAlbumCovers {
+		debug("user requested no album covers")
+		return nil
+	}
+
 	var query strings.Builder
 
 	if album := strings.TrimSpace(r.Records["Album"]); album != "" {
@@ -194,6 +199,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		Path:   fmt.Sprintf("/release-group/%s", musicBrainz.ReleaseGroups[0].ID),
 	}
 	resp, err = http.DefaultClient.Do(&request)
+	debug("Request URL:", resp.Request.URL)
 	if err != nil || resp.StatusCode != 200 {
 		debug("error while trying to request from Cover Art Archive (or it's an http error):", err)
 		return nil
