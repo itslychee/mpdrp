@@ -21,16 +21,15 @@ import (
 type MusicBrainzBase struct {
 	Releases []struct {
 		ID    string `json:"id"`
-		Score int `json:"score"`
+		Score int    `json:"score"`
 	} `json:"releases"`
 }
 
 type CoverArtBase struct {
-	Images []struct{
+	Images []struct {
 		Image string `json:"image"`
 	} `json:"images"`
 }
-
 
 func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {
 	// status: Get the player's current positioning
@@ -102,7 +101,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 	if err != nil {
 		return err
 	}
-	
+
 	var s = new(discord.Payload)
 	if err := json.Unmarshal(buf, s); err != nil {
 		debug("unmarshal error while unpacking received data:", err)
@@ -121,77 +120,119 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return fmt.Errorf("ERROR: [%d] %s", s.Data.Code, s.Data.Message)
 	}
 
-	query := map[string]string{}
+	var query strings.Builder
+
+	if album := strings.TrimSpace(r.Records["Album"]); album != "" {
+		query.WriteString(fmt.Sprintf("releasegroup:%s ", strconv.Quote(album)))
+	}
+	if albumArtist := strings.TrimSpace(r.Records["AlbumArtist"]); albumArtist != "" {
+		query.WriteString(fmt.Sprintf("albumartist:%s ", strconv.Quote(albumArtist)))
+	}
+	if artist := strings.TrimSpace(r.Records["Artist"]); artist != "" {
+		query.WriteString(fmt.Sprintf("artist:%s ", strconv.Quote(artist)))
+	}
 	if title := strings.TrimSpace(r.Records["Title"]); title != "" {
-		query["release"] = title
+		query.WriteString(fmt.Sprintf("title:%s ", strconv.Quote(title)))
 	}
-	if artist := strings.TrimSpace(r.Records["AlbumArtist"]); artist != "" {
-		query["artistname"] = artist
-	}
-
-	baseUrl := "https://musicbrainz.org/ws/2/release"
-	var queryBuilder strings.Builder
-	for k, v := range query {
-		queryBuilder.WriteString(fmt.Sprintf("%s:\"%s\" ", k, v))
-	}
-
-	params := url.Values{
-		"fmt": []string{"json"},
-		"query": []string{queryBuilder.String()},
-	}
-
-	resp, err := http.Get(baseUrl + "?" + params.Encode())
-	log.Println(resp.Status, resp)
-	if err != nil || resp.StatusCode != 200 {
-		return err
-	}
-	buf, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var data MusicBrainzBase
-	if err := json.Unmarshal(buf, &data); err != nil {
-		return err
-	}
-	if len(data.Releases) > 1 && data.Releases[0].Score <= 90 {
-		return err
-	}
-
-	resp, err = http.Get("https://coverartarchive.org/release/"+data.Releases[0].ID)
-	if resp.StatusCode != 200 || err != nil {
-		return err
-	}
-
-	buf, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	log.Println(string(buf))
-
-	var d CoverArtBase
-	if err := json.Unmarshal(buf, &d); err != nil {
-		return err
-	}
-
-	if len(d.Images) == 0 {
+	if query.String() == "" {
+		debug("not enough metadata to use in order to search for song's album cover")
 		return nil
 	}
 
-	resp, err = http.Get(d.Images[0].Image)
-	if err != nil {
-		return err
+	request := http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Scheme: "https",
+			Host:   "musicbrainz.org",
+			Path:   "/ws/2/release-group",
+			RawQuery: url.Values{
+				"query": []string{query.String()},
+				"limit": []string{"1"},
+			}.Encode(),
+		},
+		Header: http.Header{
+			"Accept":     []string{"application/json"},
+			"User-Agent": []string{"MPDRP (https://github.com/ItsLychee/mpdrp)"},
+		},
 	}
 
+	resp, err := http.DefaultClient.Do(&request)
+	if err != nil || resp.StatusCode != 200 {
+		debug("could not fetch data, either because of a http error or something else:", err)
+		return nil
+	}
+	defer resp.Body.Close()
+	debug("Request URL:", resp.Request.URL)
+
+	var musicBrainz struct {
+		Count         int `json:"count"`
+		ReleaseGroups []struct {
+			ID          string `json:"id"`
+			Title       string `json:"title"`
+			PrimaryType string `json:"primary-type"`
+		} `json:"release-groups"`
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		debug("error while reading HTTP body:", err)
+		return nil
+	}
+	debug("response data:", string(b))
+	if err := json.Unmarshal(b, &musicBrainz); err != nil {
+		debug("json unmarshal error:", err)
+		return nil
+	}
+	if musicBrainz.Count == 0 {
+		debug("MusicBrainz could not find any release groups")
+		return nil
+	}
+
+	request.URL = &url.URL{
+		Scheme: "https",
+		Host:   "coverartarchive.org",
+		Path:   fmt.Sprintf("/release-group/%s", musicBrainz.ReleaseGroups[0].ID),
+	}
+	resp, err = http.DefaultClient.Do(&request)
+	if err != nil || resp.StatusCode != 200 {
+		debug("error while trying to request from Cover Art Archive (or it's an http error):", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	b, err = io.ReadAll(resp.Body)
+	if err != nil {
+		debug("error while reading HTTP body:", err)
+		return nil
+	}
+	debug("response data:", string(b))
+
+	var coverArt struct {
+		Images []struct {
+			Image string `json:"image"`
+		} `json:"images"`
+	}
+
+	if err := json.Unmarshal(b, &coverArt); err != nil {
+		debug("json unmarshal error:", err)
+		return nil
+	}
+
+	if len(coverArt.Images) == 0 {
+		debug("no images available")
+		return nil
+	}
+
+	resp, err = http.Get(coverArt.Images[0].Image)
+	if err != nil || resp.StatusCode != 200{
+		debug("error while retrieving image url redirection:", err)
+		return nil
+	}
+	resp.Body.Close()
 	payload.Assets.LargeImage = resp.Request.URL.String()
-	log.Println(payload.Assets.LargeImage)
-	_, _, err = ipc.SetActivity(payload)
-	if err != nil {
-		return err
-	}
 
-	return nil
-
+	_, buf, err = ipc.SetActivity(payload)
+	return err
 }
 
 func getDefaultAddresses() (addresses []Addr, err error) {
