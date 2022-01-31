@@ -215,7 +215,8 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 
 	var coverArt struct {
 		Images []struct {
-			Image string `json:"image"`
+			Image      string `json:"image"`
+			Thumbnails map[string]string
 		} `json:"images"`
 	}
 
@@ -229,8 +230,8 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return nil
 	}
 
-	resp, err = http.Get(coverArt.Images[0].Image)
-	if err != nil || resp.StatusCode != 200{
+	resp, err = http.Get(coverArt.Images[0].Thumbnails["small"])
+	if err != nil || resp.StatusCode != 200 {
 		debug("error while retrieving image url redirection:", err)
 		return nil
 	}
