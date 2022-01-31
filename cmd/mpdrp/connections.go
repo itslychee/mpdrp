@@ -18,19 +18,6 @@ import (
 	"github.com/ItsLychee/mpdrp/mpd"
 )
 
-type MusicBrainzBase struct {
-	Releases []struct {
-		ID    string `json:"id"`
-		Score int    `json:"score"`
-	} `json:"releases"`
-}
-
-type CoverArtBase struct {
-	Images []struct {
-		Image string `json:"image"`
-	} `json:"images"`
-}
-
 func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {
 	// status: Get the player's current positioning
 	// currentsong: Get the metadata of the song
