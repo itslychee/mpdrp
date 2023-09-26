@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ItsLychee/mpdrp/mpd"
+	"github.com/itslychee/mpdrp/mpd"
 )
 
 func formatResponse(command mpd.Command, r *mpd.Response) {
