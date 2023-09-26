@@ -2,8 +2,8 @@
 
 <img src="https://cdn.discordapp.com/app-icons/1155715236167426089/db147772ae4b4e494cb9ff61a0e2e9f1.png?size=256" alt="mpdrp logo" height=200 width=200>
 
-MPDRP is a [Discord Rich Presence](https://discord.com) that accordingly displays your 
-MPD status via the Rich Presence.
+MPDRP is a [Discord Rich Presence](https://discord.com) that displays your 
+MPD status via the Rich Presence accordingly.
 
 ## Using
 
