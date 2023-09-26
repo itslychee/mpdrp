@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ItsLychee/mpdrp/discord"
-	"github.com/ItsLychee/mpdrp/mpd"
+	"github.com/itslychee/mpdrp/discord"
+	"github.com/itslychee/mpdrp/mpd"
 )
 
 func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) error {

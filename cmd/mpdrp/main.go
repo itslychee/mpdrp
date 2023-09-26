@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ItsLychee/mpdrp/discord"
-	"github.com/ItsLychee/mpdrp/mpd"
+	"github.com/itslychee/mpdrp/discord"
+	"github.com/itslychee/mpdrp/mpd"
 )
 
 var (

@@ -1,4 +1,4 @@
-module github.com/ItsLychee/mpdrp
+module github.com/itslychee/mpdrp
 
 go 1.16
 
