@@ -1,39 +1,31 @@
-# MPDRP
+# MPDRP, a MPD Rich Presence for Discord
+
+<img src="https://cdn.discordapp.com/app-icons/1155715236167426089/db147772ae4b4e494cb9ff61a0e2e9f1.png?size=256" alt="mpdrp logo" height=200 width=200>
 
 MPDRP is a [Discord Rich Presence](https://discord.com) that accordingly displays your 
 MPD status via the Rich Presence.
 
-# Using
+## Using
 
-I have made it to the best of my ability (or to the extent of my productivity) to make MPDRP as user friendly as possible. Grab a release
-from the [Releases page](/releases) and follow the instructions that are stated there. On a bit of an unrelated note, I haven't cared to tag commits during
-the under-development era of the project since it was not only in a fluctuating state of change but there wasn't any reason to.
-
-While i test on Linux and Windows, there are no OSX-specific features or
-issues that I am aware of, so building/using MPDRP on OSX ideally shouldn't be a problem.
-
-## Building
-
-You will only need [Go](https://go.dev) and the dependencies listed in the `go.mod` file. 
+You will only need [Go](https://go.dev) and the dependencies listed in the `go.mod` file. As of right now, I do not provide
+prebuilt binaries, but maybe if this project receives more recognition I will.
 
 ```bash
-$ go build ./cmd/mpdrp
+$ git clone https://github.com/itslychee/mpdrp && cd mpdrp
+$ go build ./cmd/mpdrp # or alternatively go run ./cmd/mpdrp and use the arguments below
 $ ./mpdrp -retry --retry-delay 1s --address 127.0.0.1:1234 --password "password!"
 // 2021/08/22 02:33:31 ] attempting to connect to 1 address(es)
 // ...
 ```
 
 # Autostart
-
 It's ideal that the program shouldn't be manually started by the user, so I've attempted to create decent scripts. For Linux and OSX users, you
 will have to change it up to meet your needs.
 
 ## Windows
-
 Open up the folder and execute `mpdrp.bat` while following its instructions.
 
 ## OSX
-
 - Open up the folder
 - Move `mpdrp.plist` to `/Library/LaunchAgents/`
 - Open up your Terminal
@@ -44,12 +36,18 @@ As I don't have a Mac, I cannot assure you that the program or the plist file pr
 to you, please make a PR or an issue. I would highly be appreciative!
 
 ## Linux
-
 For systemd users, you will need to copy `mpdrp.service` in the extracted tarball folder. I recommend using `systemd-user` for MPDRP as it is locally based
 and as such, it doesn't require root. For other process managers, you're expected to know how to create one yourself, or feel free to create a PR that improves/adds on to
-the current release configuration.
+the current release configuration, I'd appreciate your contribution greatly.
 
 ## Screenshots
-
 Find them in the `/assets` directory of the repository, their filenames will start with `showcase`. I mainly done this to make the
 page faster to load.
+
+## Copyright Notice
+The image used for the front facing project icon uses assets from MPD (https://www.musicpd.org) and Discord (https://discord.com), 
+<strong><u>all rights are reserved</u></strong> to these entities and any legitimate request made by either one for removal should be done 
+through [email](mailto:itslychee@protonmail.com), or my discord `@itsalychee`. As such this excludes the image from the AGPL-3.0 license.
+
+The rest of the project, including assets in `assets/`, is licensed under AGPLv3 unless explicitly stated otherwise. By contributing to this project
+you also agree to license your code under the same license.
