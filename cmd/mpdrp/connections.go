@@ -52,7 +52,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		State:   &state,
 		Details: &details,
 		Assets: &discord.Assets{
-			LargeImage: "mpd_logo",
+			LargeImage: "no_album",
 			LargeText:  "Music Player Daemon",
 			SmallImage: "mpd_" + r.Records["state"],
 		},
@@ -81,7 +81,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 	if buf, err := json.MarshalIndent(payload, "", "  "); err != nil {
 		debug("error while indenting marshalled json:", err)
 	} else {
-		debug("TO BE SENT:\n", string(buf))
+		debug("SENDING OUT:\n", string(buf))
 	}
 
 	_, buf, err := ipc.SetActivity(payload)
@@ -144,7 +144,7 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		},
 		Header: http.Header{
 			"Accept":     []string{"application/json"},
-			"User-Agent": []string{"MPDRP (https://github.com/ItsLychee/mpdrp)"},
+			"User-Agent": []string{"MPDRP (https://github.com/itslychee/mpdrp)"},
 		},
 	}
 
@@ -223,7 +223,9 @@ func updateRichPresence(mpc *mpd.MPDConnection, ipc *discord.DiscordPresence) er
 		return nil
 	}
 	resp.Body.Close()
-	payload.Assets.LargeImage = resp.Request.URL.String()
+	if resp.Request.URL != nil {
+		payload.Assets.LargeImage = resp.Request.URL.String()
+	}
 
 	_, buf, err = ipc.SetActivity(payload)
 	return err
