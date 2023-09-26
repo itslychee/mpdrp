@@ -1,23 +1,3 @@
-# DEPRECATION NOTICE!
-
-I have stopped using Discord so the default client ID that was provided in mpdrp's code will be 
-rendered invalid. However this can still be remedied without code modifications so you can
-simply pass `-client-id xxxxx...` and use your own rich presence application, but creating an
-application is not enough as you must upload assets, naming is provided below.
-
-- `assets/MPDPlay.png` must be named `mpd_play`
-- `assets/MPDPause.png` must be named `mpd_pause`
-- `assets/MPDStop.png` may be uploaded and named `mpd_stop`, but this is optional
-
-After you do all of that, mpdrp should work as intended, granted that Discord hasn't changed the API up at the
-time of writing this. I may start this project back up, perhaps if a few variables such as interest develops up on
-both my and your side. 
-
-This was actually my first Go project, and I really enjoyed working on this and I hope 
-that I'll give it the love it deserves in the near future, but for right now I am just not in the
-current position to think about this at all, and I wish I was.
-
-
 # MPDRP
 
 MPDRP is a [Discord Rich Presence](https://discord.com) that accordingly displays your 
