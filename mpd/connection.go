@@ -1,23 +1,151 @@
 package mpd
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
 var errParser = regexp.MustCompile(`^ACK\s\[(\d*)@(\d*)\]\s{([a-zA-Z _]*)}\s(.+)`)
 
+type MPDConnInfo struct {
+	Address  net.Addr
+	Password string
+	Timeout  time.Duration
+}
+
+func ResolveAddr(address string) (addr net.Addr) {
+	var err error
+	switch {
+	case strings.HasPrefix(address, "@/"):
+		addr, err = net.ResolveUnixAddr("unixgram", address)
+	case strings.HasPrefix(address, "/"):
+		addr, err = net.ResolveUnixAddr("unix", address)
+	default:
+		addr, err = net.ResolveTCPAddr("tcp", address)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 type MPDConnection struct {
 	conn *textproto.Conn
 }
 
-func (mpd *MPDConnection) Connect(network, address string, timeout time.Duration) error {
+func (mpd *MPDConnection) Connect(conn *MPDConnInfo) error {
+	// We immediately default to connecting to the specified address only, otherwise
+	// we'll try a list of defaults to connect to.
+	if conn == nil {
+		conn = &MPDConnInfo{}
+	}
+	if conn.Address != nil {
+		return mpd.connect(
+			conn.Address.Network(),
+			conn.Address.String(),
+			conn.Timeout,
+		)
+	}
+
+	var timeout time.Duration
+	val, ok := os.LookupEnv("MPD_TIMEOUT")
+	if !ok {
+		timeout = conn.Timeout
+	} else {
+		v, err := strconv.Atoi(val)
+		if err != nil {
+			return fmt.Errorf("MPD_TIMEOUT parsing error: %w", err)
+		}
+		timeout = time.Second * time.Duration(v)
+	}
+
+	var mpdAddresses []MPDConnInfo
+	if runtime.GOOS != "windows" {
+		if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+			mpdAddresses = append(mpdAddresses, MPDConnInfo{
+				Address:  ResolveAddr(filepath.Join(dir, "mpd/socket")),
+				Timeout:  timeout,
+				Password: conn.Password,
+			})
+		}
+		mpdAddresses = append(mpdAddresses, MPDConnInfo{
+			Address:  ResolveAddr("/run/mpd/socket"),
+			Timeout:  timeout,
+			Password: conn.Password,
+		})
+	}
+
+	connInfo := MPDConnInfo{Timeout: timeout}
+	mpdHost := os.Getenv("MPD_HOST")
+	if mpdHost == "" {
+		mpdHost = "127.0.0.1"
+	}
+	mpdPort, ok := os.LookupEnv("MPD_PORT")
+	if !ok {
+		mpdPort = "6600"
+	}
+	if strings.Contains(mpdHost, "@") {
+		parts := strings.SplitN(mpdHost, "@", 2)
+		mpdHost = parts[1]
+		if parts[0] != "" {
+			connInfo.Password = parts[0]
+		}
+		if strings.HasPrefix(mpdHost, "@/") {
+			connInfo.Address = ResolveAddr(mpdHost)
+			mpdAddresses = append(mpdAddresses, connInfo)
+		}
+	}
+
+	addr := MPDConnInfo{
+		Address: ResolveAddr(net.JoinHostPort(mpdHost, mpdPort)),
+		Timeout: timeout,
+	}
+	mpdAddresses = append(mpdAddresses, addr)
+	if addr.Address.String() != "127.0.0.1:6600" {
+		mpdAddresses = append(mpdAddresses, MPDConnInfo{
+			Timeout: timeout,
+			Address: ResolveAddr("127.0.0.1:6600"),
+		})
+	}
+
+	for _, address := range mpdAddresses {
+		err := mpd.connect(address.Address.Network(), address.Address.String(), address.Timeout)
+		if err == nil {
+			return nil
+		}
+
+		// Code to distinguish connection refused from more serious
+		// errors, as they shouldn't be silenced.
+		switch v := err.(type) {
+		case *net.OpError:
+			if v.Op == "read" || v.Op == "dial" {
+				continue
+			}
+		case syscall.Errno:
+			if v == syscall.ECONNREFUSED {
+				continue
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func (mpd *MPDConnection) connect(network, address string, timeout time.Duration) error {
 	// Support timeouts to allow more flexibility
+	if mpd.conn != nil {
+		return errors.New("cannot connect to MPD, you're already connected")
+	}
 	c, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
 		return err
@@ -52,21 +180,21 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 	mpd.conn.EndRequest(sid)
 
 	var response = &Response{
-		Records: make(map[string]string),
+		Records: make(map[string][]string),
 	}
 
 	mpd.conn.StartResponse(sid)
 	defer mpd.conn.EndResponse(sid)
 	for {
 		s, err := mpd.conn.R.ReadString(0x0A)
+		fmt.Printf("%s\n", s)
 		s = strings.TrimSpace(s)
 		if err != nil {
-			return response, err 
+			return response, err
 		}
 
 		switch {
 		case strings.HasPrefix(s, "OK"):
-			// As defined by the spec, this is where we should stop reading
 			response.eol = []byte(s)
 			return response, nil
 		case strings.HasPrefix(s, "ACK"):
@@ -102,9 +230,11 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 			}
 			return nil, respErr
 		default:
+			// TODO: Fix binary responses
 			fields := strings.SplitN(string(s), ":", 2)
+			fmt.Printf("fields: [%+v]\n\n", fields)
 			fields[1] = strings.TrimSpace(fields[1])
-			response.Records[fields[0]] = fields[1]
+			response.Records[fields[0]] = append(response.Records[fields[0]], fields[1])
 			if fields[0] == "binary" {
 				// After retrieving the binary data, we won't break out of this loop as
 				// the "OK" should be present at the end
@@ -113,8 +243,8 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 				if err != nil {
 					panic(err)
 				}
-				response.Data = make([]byte, allocSize)
-				if _, err = mpd.conn.R.Read(response.Data); err != nil {
+				response.Binary = make([]byte, allocSize)
+				if _, err = mpd.conn.R.Read(response.Binary); err != nil {
 					panic(err)
 				}
 			}

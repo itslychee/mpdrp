@@ -26,9 +26,9 @@ func (r Command) String() string {
 }
 
 type Response struct {
-	Records map[string]string
-	Command Command
-	Data    []byte
+	Records map[string][]string
+	Command []Command
+	Binary []byte
 	eol     []byte
 }
 
