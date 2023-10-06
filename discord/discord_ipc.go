@@ -22,13 +22,12 @@ func (c *DiscordPresence) Close() error {
 	return nil
 }
 
-func (c *DiscordPresence) CreateHandshake() error {
+func (c *DiscordPresence) CreateHandshake() ([]byte, error) {
 	payload := Payload{
 		Version:  1,
 		ClientID: c.ClientID,
 	}
-	_, err := c.Send(Handshake, payload)
-	return err
+	return c.Send(Handshake, payload)
 }
 
 func (c *DiscordPresence) SetActivity(activity *Activity) (string, []byte, error) {
