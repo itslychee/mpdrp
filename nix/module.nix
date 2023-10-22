@@ -1,0 +1,81 @@
+{ 
+    config, 
+    pkgs,
+    options,
+    ...
+}:
+with pkgs.lib;
+with pkgs.lib.types;
+let
+    cfg = config.programs.mpdrp;
+
+in {
+    options = {
+        programs.mpdrp = {
+            enable = mkEnableOption "mpdrp";
+            package = mkPackageOption "mpdrp";
+            settings = { 
+                    retry = { 
+                      enable = mkEnableOption "retries";
+                      delay = mkOption {
+                          description = "Grace period between reconnections, in seconds";
+                          type = int;
+                          default = 5;
+                      };
+                    };
+                    verbose = mkEnableOption "verbose";
+                    password = mkOption { 
+                        type = nullOr string; 
+                        description = "Password to MPD server";
+                        default = null;
+                    };
+                    albumCovers = mkOption {
+                        type = bool;
+                        description = ''
+                            Whether to fetch from Cover Art Archive via MusicBrainz 
+                            to utilize the album cover for the Rich Presence's LargeImage field.
+                        '';
+                        default = true;
+                    };
+                    clientID = mkOption {
+                        type = nullOr int;
+                        description = ''
+                            Client ID for mpdrp to use, normally you shouldn't set this.
+
+                            By default the program will use it's preconfigured ID 
+                        '';
+                        default = null;
+                    };
+                    timeout = mkOption {
+                        type = int;
+                        description = "TCP connection timeout, this isn't used for other connection protocols";
+                        default = 30;
+                    };
+                    address = mkOption {
+                        type = nullOr string;
+                        description = "Address to use for connection, if unset mpdrp will choose from a list of defaults";
+                        default = null;
+                    };
+                };
+            };
+    };
+    config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
+        Unit.Description = "A discord rich presence for MPD";
+        Service = let 
+           opts = [
+              (if cfg.settings.retry.enable then "--retry" else "")
+              (if (cfg.settings.retry.delay != 0) then "--retry-delay ${toString cfg.settings.retry.delay}" else "")
+              (if cfg.settings.password != null then "--password ${cfg.settings.password}" else "")
+              (if (!cfg.settings.albumCovers) then "--no-album-covers" else "")
+              (if (cfg.settings.clientID != null) then "--client-id ${toString cfg.settings.clientID}" else "")
+              (if (cfg.settings.verbose != false) then "--verbose" else "")
+              "--timeout ${toString cfg.settings.timeout}" 
+              (if (cfg.settings.address != null) then "--address ${cfg.settings.address}" else "")
+           ];
+        in {
+            Type = "exec";
+            ExecStart = "${pkgs.mpdrp}/bin/mpdrp ${concatStrings opts}";
+        };
+        Install.WantedBy = [ "multi-user.target" ];
+    };
+}

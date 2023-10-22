@@ -23,5 +23,7 @@
       # Making it accessible to other Nix users
       packages.default = import nix/packages.nix pkgs;
       overlays.default = (_: _: { mpdrp = self.packages.${system}.default.mpdrp; });
-    });
-}
+    }) // {
+      nixosModules.default = import nix/module.nix;
+    };
+  }
