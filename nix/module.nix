@@ -65,7 +65,7 @@ in {
             };
     };
 
-    config.home.packages = (mkIf cfg.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]));
+    config.home.packages = (mkIf cfg.settings.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]));
     config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
         Unit.Description = "A discord rich presence for MPD";
         Service = let 
