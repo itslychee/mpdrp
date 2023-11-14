@@ -60,7 +60,7 @@ in {
                         type = bool;
                         description = "Include cmd/mpc to path";
                         default = false;
-                    }
+                    };
                 };
             };
     };
