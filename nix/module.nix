@@ -72,7 +72,6 @@ in {
               (if (!cfg.settings.albumCovers) then "-no-album-covers" else "")
               (if (cfg.settings.clientID != null) then "--client-id ${toString cfg.settings.clientID}" else "")
               (if (cfg.settings.verbose != false) then "--verbose" else "")
-              "--timeout ${toString cfg.settings.timeout}" 
               (if (cfg.settings.address != null) then "--address ${cfg.settings.address}" else "")
            ];
         in {
