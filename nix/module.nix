@@ -15,13 +15,10 @@ in {
             enable = mkEnableOption "mpdrp";
             package = mkPackageOption "mpdrp";
             settings = { 
-                    retry = { 
-                      enable = mkEnableOption "retries";
-                      delay = mkOption {
-                          description = "Grace period between reconnections, in seconds";
-                          type = int;
-                          default = 5;
-                      };
+                    reconnect = mkOption {
+                      description = "Grace period between reconnections, in seconds";
+                      type = int;
+                      default = 5;
                     };
                     verbose = mkEnableOption "verbose";
                     password = mkOption { 
@@ -70,10 +67,9 @@ in {
         Unit.Description = "A discord rich presence for MPD";
         Service = let 
            opts = [
-              (if cfg.settings.retry.enable then "--retry" else "")
-              (if (cfg.settings.retry.delay != 0) then "--retry-delay ${toString cfg.settings.retry.delay}" else "")
+              "-reconnect ${toString cfg.settings.reconnect}"
               (if cfg.settings.password != null then "--password ${cfg.settings.password}" else "")
-              (if (!cfg.settings.albumCovers) then "--no-album-covers" else "")
+              (if (!cfg.settings.albumCovers) then "-no-album-covers" else "")
               (if (cfg.settings.clientID != null) then "--client-id ${toString cfg.settings.clientID}" else "")
               (if (cfg.settings.verbose != false) then "--verbose" else "")
               "--timeout ${toString cfg.settings.timeout}" 
