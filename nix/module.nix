@@ -67,7 +67,7 @@ in {
         Unit.Description = "A discord rich presence for MPD";
         Service = let 
            opts = [
-              "--reconnect ${toString cfg.settings.reconnect}"
+              "--reconnect ${toString cfg.settings.reconnect}s"
               (if cfg.settings.password != null then "--password ${cfg.settings.password}" else "")
               (if (!cfg.settings.albumCovers) then "-no-album-covers" else "")
               (if (cfg.settings.clientID != null) then "--client-id ${toString cfg.settings.clientID}" else "")
