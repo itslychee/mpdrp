@@ -14,7 +14,7 @@ import (
 
 type DiscordPresence struct {
 	ClientID string
-	conn     net.Conn
+	Conn     net.Conn
 }
 
 var envKeys = [4]string{"XDG_RUNTIME_DIR", "TMPDIR", "TMP", "TEMP"}
@@ -43,7 +43,7 @@ func (c *DiscordPresence) Connect() error {
 			return err
 		}
 
-		c.conn = conn
+		c.Conn = conn
 		return nil
 
 	}

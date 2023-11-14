@@ -56,9 +56,16 @@ in {
                         description = "Address to use for connection, if unset mpdrp will choose from a list of defaults";
                         default = null;
                     };
+                    withMpc = mkOption {
+                        type = bool;
+                        description = "Include cmd/mpc to path";
+                        default = false;
+                    }
                 };
             };
     };
+
+    config.home.packages = mkIf cfg.withMpc with pkgs; [ pkgs.mpdrp-mpc ];
     config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
         Unit.Description = "A discord rich presence for MPD";
         Service = let 

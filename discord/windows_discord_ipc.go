@@ -14,7 +14,7 @@ import (
 
 type DiscordPresence struct {
 	ClientID string
-	conn     net.Conn
+	Conn     net.Conn
 }
 
 func (c *DiscordPresence) Connect() error {
@@ -28,7 +28,7 @@ func (c *DiscordPresence) Connect() error {
 			return err
 		}
 
-		c.conn = conn
+		c.Conn = conn
 		return nil
 
 	}

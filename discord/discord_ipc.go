@@ -12,12 +12,12 @@ import (
 )
 
 func (c *DiscordPresence) Close() error {
-	if c.conn != nil {
+	if c.Conn != nil {
 		_, err := c.Send(Close, Payload{})
 		if err != nil {
 			return err
 		}
-		return c.conn.Close()
+		return c.Conn.Close()
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func (c *DiscordPresence) Send(opcode OpCode, payload Payload) ([]byte, error) {
 }
 
 func (c *DiscordPresence) Write(b []byte) (n int, err error) {
-	n, err = c.conn.Write(b)
+	n, err = c.Conn.Write(b)
 	if errors.Is(err, io.EOF) {
 		c.Close()
 	}
@@ -88,7 +88,7 @@ func (c *DiscordPresence) Write(b []byte) (n int, err error) {
 }
 
 func (c *DiscordPresence) Read(b []byte) (n int, err error) {
-	n, err = c.conn.Read(b)
+	n, err = c.Conn.Read(b)
 	if errors.Is(err, io.EOF) {
 		c.Close()
 	}

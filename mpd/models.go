@@ -32,6 +32,11 @@ type Response struct {
 	eol     []byte
 }
 
+
+func (r Response) Get(value string) string {
+	return r.Records[value][0]
+}
+
 func (r Response) OK() []byte {
 	return r.eol
 }
