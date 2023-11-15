@@ -22,7 +22,7 @@ in {
                     };
                     verbose = mkEnableOption "verbose";
                     password = mkOption { 
-                        type = nullOr string; 
+                        type = nullOr str; 
                         description = "Password to MPD server";
                         default = null;
                     };
@@ -49,7 +49,7 @@ in {
                         default = 30;
                     };
                     address = mkOption {
-                        type = nullOr string;
+                        type = nullOr str;
                         description = "Address to use for connection, if unset mpdrp will choose from a list of defaults";
                         default = null;
                     };
