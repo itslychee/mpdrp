@@ -78,6 +78,5 @@ in {
             Type = "exec";
             ExecStart = "${pkgs.mpdrp}/bin/mpdrp " + (concatStringsSep " " opts);
         };
-        Install.WantedBy = [ "multi-user.target" ];
     };
 }

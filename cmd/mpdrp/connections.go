@@ -24,7 +24,7 @@ type ReleaseGroups struct {
 func GetCoverArt(r mpd.Response) (cover string, err error) {
 	if *noAlbumCovers {
 		log(Debug, "not retrieving album cover as configured")
-		cover = "no_album"
+		cover = NoAlbumAsset
 		return
 	}
 
@@ -32,20 +32,26 @@ func GetCoverArt(r mpd.Response) (cover string, err error) {
 	if !ok {
 		var query strings.Builder
 		// FIXME: Possible index error
-		if album := strings.TrimSpace(r.Records["Album"][0]); album != "" {
-			query.WriteString(fmt.Sprintf("releasegroup:%s ", strconv.Quote(album)))
+		album, ok := r.Records["Album"]
+		if ok {
+		  query.WriteString(fmt.Sprintf("releasegroup:%s ", strconv.Quote(strings.TrimSpace(album[0]))))
 		}
-		if albumArtist := strings.TrimSpace(r.Records["Artist"][0]); albumArtist != "" {
-			query.WriteString(fmt.Sprintf("albumartist:%s ", strconv.Quote(albumArtist)))
+		artist, ok := r.Records["Artist"]
+		if ok {
+		  query.WriteString(fmt.Sprintf("artist:%s ", strconv.Quote(strings.TrimSpace(artist[0]))))
 		}
-		if artist := strings.TrimSpace(r.Records["Artist"][0]); artist != "" {
-			query.WriteString(fmt.Sprintf("artist:%s ", strconv.Quote(artist)))
+		albumArtist, ok := r.Records["AlbumArtist"]
+		if ok {
+		  query.WriteString(fmt.Sprintf("albumartist:%s ", strconv.Quote(strings.TrimSpace(albumArtist[0]))))
 		}
-		if title := strings.TrimSpace(r.Records["Title"][0]); title != "" {
-			query.WriteString(fmt.Sprintf("title:%s ", strconv.Quote(title)))
+		title, ok := r.Records["Title"]
+		if ok {
+		  query.WriteString(fmt.Sprintf("title:%s ", strconv.Quote(strings.TrimSpace(title[0]))))
 		}
+
 		if query.String() == "" {
 			log(Normal, "not enough metadata to use in order to search for song's album cover")
+			cover = NoAlbumAsset
 			return
 		}
 		req := &http.Request{
@@ -89,7 +95,7 @@ func GetCoverArt(r mpd.Response) (cover string, err error) {
 			return
 		}
 		rel := d.ReleaseGroups[0].ID
-		resp, err := http.Get(fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-500", rel))
+		resp, err := http.Get(fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-250", rel))
 		if err != nil {
 			return "", err
 		}
@@ -97,7 +103,7 @@ func GetCoverArt(r mpd.Response) (cover string, err error) {
 			log(Network, "bad asset, returning default album asset")
 			v = []string{NoAlbumAsset}
 		} else {
-			v = []string{fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-500", rel)}
+			v = []string{fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-250", rel)}
 		}
 	}
 	cover = v[0]
