@@ -21,8 +21,8 @@
         packages = [ unstable.go gomod2nix.packages.${system}.default ];
       };
       # Making it accessible to other Nix users
-      packages.default = import nix/packages.nix pkgs;
-      overlays.default = (_: _: { 
+      packages = import nix/packages.nix pkgs;
+      overlays = (_: _: { 
         mpdrp = self.packages.${system}.default.mpdrp; 
         mpdrp-mpc = self.packages.${system}.default.mpdrp-mpc;
       });
