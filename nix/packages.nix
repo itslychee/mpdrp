@@ -1,24 +1,23 @@
 pkgs:
-with pkgs;
-let 
-
-in rec {
-    mpdrp = buildGoApplication rec {
+{
+    mpdrp = pkgs.buildGoApplication rec {
         name = "mpdrp";
         pname = name;
         go = pkgs.go;
         modules = ./gomod2nix.toml;
         src = ../.;
+        doCheck = false;
         subPackages = [
             "cmd/mpdrp"
         ];
     };
-    mpdrp-mpc = buildGoApplication rec {
+    mpdrp-mpc = pkgs.buildGoApplication rec {
         name = "mpdrp-mpc";
-        pname = name;
+        pname = "mpc";
         go = pkgs.go;
         modules = ./gomod2nix.toml;
         src = ../.;
+        doCheck = false;
         subPackages = [
             "cmd/mpc"
         ];

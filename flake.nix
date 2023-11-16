@@ -1,29 +1,29 @@
 {
   inputs = {
-    utils.url = "github:numtide/flake-utils";
-    unstable-nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     gomod2nix.url = "github:nix-community/gomod2nix";
   };
-  outputs = { self, nixpkgs, unstable-nixpkgs, utils, gomod2nix, ... }@inputs: utils.lib.eachDefaultSystem (system:
-    let
+  outputs = { self, gomod2nix, nixpkgs}: let
+    supportedSystems = [
+      "x86_64-linux"
+      "aarch64-linux" 
+      "aarch64-darwin"
+      "x86_64-darwin"
+    ];
+    withSystems = f: nixpkgs.lib.genAttrs supportedSystems
+    (system: let
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [
-          gomod2nix.overlays.default
-          (final: prev: {
-            unstable = unstable-nixpkgs.legacyPackages.${system};
-          })
-        ];
+        overlays = [ gomod2nix.overlays.default ];
       };
-    in
-    with pkgs; {
-      devShells.default = mkShell {
-        packages = [ unstable.go gomod2nix.packages.${system}.default ];
+    in (f { inherit system pkgs; }));
+  in {
+    devShells = withSystems ({pkgs, system}: {
+      default = pkgs.mkShell {
+        packages = with pkgs; [ gomod2nix.packages.${system}.default go ];
       };
-      # Making it accessible to other Nix users
-      packages = import nix/packages.nix pkgs;
-      overlays = (_: _: self.packages.${system});
-    }) // {
-      nixosModules.default = import nix/module.nix;
-    };
-  }
+    });
+    packages = withSystems ({ pkgs, system }: (import nix/packages.nix pkgs));
+    nixosModules.default = import ./nix/module.nix;
+  };
+}
