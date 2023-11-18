@@ -65,7 +65,7 @@ in {
     config.home.packages = (mkIf cfg.settings.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]));
     config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
         Unit.Description = "A discord rich presence for MPD";
-        Install.WantedBy = "default.target";
+        Install.WantedBy = [ "default.target" ];
         Service = let 
            opts = [
               "--reconnect ${toString cfg.settings.reconnect}s"
