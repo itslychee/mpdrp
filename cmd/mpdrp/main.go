@@ -81,6 +81,7 @@ conn:
 		)
 		if err != nil {
 			retry_or_panic(err)
+			goto conn
 		}
 
 		var activity = &discord.Activity{
@@ -140,11 +141,13 @@ conn:
 		logjson(Network, "set activity", json.RawMessage(body))
 		if err != nil {
 			retry_or_panic(err)
+			goto conn
 		}
 		// Idle and wait
 		_, err = mpd.Exec(music.Command{Name: "idle", Args: []string{"player"}})
 		if err != nil {
 			retry_or_panic(err)
+			goto conn
 		}
 
 	}
