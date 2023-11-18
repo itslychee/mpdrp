@@ -76,7 +76,9 @@ in {
            ];
         in {
             Type = "exec";
+            After = "mpd.socket";
             ExecStart = "${pkgs.mpdrp}/bin/mpdrp " + (concatStringsSep " " opts);
         };
+        Install.WantedBy = "default.target";
     };
 }
