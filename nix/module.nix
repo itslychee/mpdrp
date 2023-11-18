@@ -65,6 +65,7 @@ in {
     config.home.packages = (mkIf cfg.settings.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]));
     config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
         Unit.Description = "A discord rich presence for MPD";
+        Unit.After = [ "mpd.socket" ];
         Install.WantedBy = [ "default.target" ];
         Service = let 
            opts = [
@@ -77,7 +78,6 @@ in {
            ];
         in {
             Type = "exec";
-            After = [ "mpd.socket" ];
             ExecStart = "${pkgs.mpdrp}/bin/mpdrp " + (concatStringsSep " " opts);
         };
     };
