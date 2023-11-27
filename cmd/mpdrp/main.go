@@ -113,9 +113,10 @@ conn:
 			if !ok {
 				v, err = GetCoverArt(*currentStatus)
 				if err != nil {
-					panic(err)
+					logf(Normal, "[error] encountered error while fetching cover art: %s", err)
+				} else {
+					cachedURLs[currentStatus.Get("songid")] = v
 				}
-				cachedURLs[currentStatus.Get("songid")] = v
 			}
 			activity.Assets.LargeImage = v
 			activity.Assets.SmallImage = PauseAsset

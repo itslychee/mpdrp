@@ -8,8 +8,15 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/itslychee/mpdrp/mpd"
+)
+
+var (
+	client = &http.Client{
+		Timeout: 15 * time.Second,
+	}
 )
 
 type ReleaseGroups struct {
@@ -22,9 +29,9 @@ type ReleaseGroups struct {
 }
 
 func GetCoverArt(r mpd.Response) (cover string, err error) {
+	cover = NoAlbumAsset
 	if *noAlbumCovers {
 		log(Debug, "not retrieving album cover as configured")
-		cover = NoAlbumAsset
 		return
 	}
 
@@ -74,7 +81,7 @@ func GetCoverArt(r mpd.Response) (cover string, err error) {
 		var response *http.Response
 		var body []byte
 		var d ReleaseGroups
-		response, err = http.DefaultClient.Do(req)
+		response, err = client.Do(req)
 		if err != nil {
 			log(Normal, "encountered error during http req")
 			return
@@ -95,7 +102,7 @@ func GetCoverArt(r mpd.Response) (cover string, err error) {
 			return
 		}
 		rel := d.ReleaseGroups[0].ID
-		resp, err := http.Get(fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-250", rel))
+		resp, err := client.Get(fmt.Sprintf("https://coverartarchive.org/release-group/%s/front-250", rel))
 		if err != nil {
 			return "", err
 		}
