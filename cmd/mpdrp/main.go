@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"os"
 	"strconv"
 	"syscall"
 	"time"
@@ -33,6 +35,17 @@ func retry_or_panic(err error) {
 		syscall.ECONNRESET,
 		syscall.EPIPE,
 	}
+
+
+	// Get syscall errno hex
+	if v, ok := err.(*net.OpError); ok {
+		if err, ok := v.Err.(*os.SyscallError); ok {
+			errno := err.Err.(syscall.Errno)
+			src := "https://cs.opensource.google/go/go/+/refs/tags/go1.21.5:src/syscall/zerrors_linux_amd64.go;l=1183"
+			logf(Normal, "panic: ERRNO (0x%x)\n%s", int(errno), src)
+		}
+	}
+
 	for _, e := range handledErrors {
 		if errors.Is(err, e) {
 			log(Network, "reattempting connection")
@@ -40,6 +53,7 @@ func retry_or_panic(err error) {
 			return
 		}
 	}
+
 	panic(err)
 }
 
