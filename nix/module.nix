@@ -62,8 +62,8 @@ in {
             };
     };
 
-    config.home.packages = (mkIf cfg.settings.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]));
-    config.systemd.user.services.mpdrp = mkIf (cfg.enable) {
+    config.home.packages = mkIf cfg.settings.withMpc (with pkgs; [ pkgs.mpdrp-mpc ]);
+    config.systemd.user.services.mpdrp = mkIf cfg.enable {
         Unit.Description = "A discord rich presence for MPD";
         Unit.After = [ "mpd.socket" ];
         Install.WantedBy = [ "default.target" ];
@@ -73,11 +73,12 @@ in {
               (if cfg.settings.password != null then "--password ${cfg.settings.password}" else "")
               (if (!cfg.settings.albumCovers) then "-no-album-covers" else "")
               (if (cfg.settings.clientID != null) then "--client-id ${toString cfg.settings.clientID}" else "")
-              (if (cfg.settings.verbose != false) then "--verbose" else "")
+              (if (cfg.settings.verbose) then "--verbose" else "")
               (if (cfg.settings.address != null) then "--address ${cfg.settings.address}" else "")
            ];
         in {
             Type = "exec";
+            Restart = "on-success";
             ExecStart = "${pkgs.mpdrp}/bin/mpdrp " + (concatStringsSep " " opts);
         };
     };
