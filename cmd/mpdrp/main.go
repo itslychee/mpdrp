@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -28,6 +29,9 @@ func init() {
 
 // retry_or_panic sucks but I intend to package mpd and discord
 // into their own full fledge repos some day :tm:
+//
+// function should not be called if it is out of reconnection context
+// and the program can recover from this error by reconnecting
 func retry_or_panic(err error) {
 	handledErrors := []syscall.Errno{
 		syscall.ECONNREFUSED,
@@ -45,6 +49,18 @@ func retry_or_panic(err error) {
 			logf(Normal, "panic: ERRNO (0x%x)\n%s", int(errno), src)
 		}
 	}
+
+	handledErrs := []error{
+		discord.ErrCannotConnect,
+		io.EOF,
+	}
+
+	for _, v := range handledErrs {
+		if errors.Is(err, v) {
+			return
+		}
+	}
+
 
 	for _, e := range handledErrors {
 		if errors.Is(err, e) {
