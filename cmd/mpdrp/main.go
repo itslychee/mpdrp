@@ -1,144 +1,184 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	logging "log"
+	"io"
+	"net"
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/itslychee/mpdrp/discord"
-	"github.com/itslychee/mpdrp/mpd"
+	music "github.com/itslychee/mpdrp/mpd"
 )
 
 var (
-	// This variable will be reassigned by the linker
-	Version = "n/a"
-	log     = logging.New(os.Stderr, "] ", logging.Lmsgprefix|logging.LstdFlags)
-	// Flags
-	address       = flag.String("address", "", "MPD's address, if left unset then the program will try a list of defaults")
-	password      = flag.String("password", "", "Password to authenticate to MPD with")
-	timeout       = flag.Duration("timeout", time.Duration(0), "how long the program should wait for the connection to respond before quitting, unique to TCP-based MPD addresses")
-	retry         = flag.Bool("retry", false, "Always reconnect to MPD and/or Discord if one of their connections get dropped")
-	retryDelay    = flag.Duration("retry-delay", time.Duration(time.Second*5), "Grace period between reconnections, this flag is useless without -retry being passed")
-	clientID      = flag.Int64("client-id", 1155715236167426089, "Client ID that MPDRP will use, it's best not to ignorantly pass this flag")
-	version       = flag.Bool("version", false, "Display MPDRP's version and exit")
-	verbose       = flag.Bool("verbose", false, "MPDRP will be more transparent with what it does internally, know this will produce a lot of output")
-	noAlbumCovers = flag.Bool("no-album-covers", false, "Disables MPDRP from making HTTP requests to retrieve an album cover URL which is set to your Rich Presence's LargeImage field")
+	debugLevel    = flag.Int("debug", 3, "debug level for program, zero disables debugging output")
+	clientID      = flag.Int("client-id", ClientID, "rich presence client id, this normally should not be changed")
+	noAlbumCovers = flag.Bool("no-album-covers", false, "Do not set album covers and retrieve them via Cover Art Archive")
+	reconnect     = flag.Duration("reconnect", time.Duration(time.Second*5), "grace period before reattempting to reconnect to MPD & Discord, must be above 5 seconds or zero to disable this")
 )
 
-func debug(v ...interface{}) {
-	if verbose != nil && *verbose {
-		log.Println(v...)
+func init() {
+	flag.Parse()
+}
+
+// retry_or_panic sucks but I intend to package mpd and discord
+// into their own full fledge repos some day :tm:
+//
+// function should not be called if it is out of reconnection context
+// and the program can recover from this error by reconnecting
+func retry_or_panic(err error) {
+	handledErrors := []syscall.Errno{
+		syscall.ECONNREFUSED,
+		syscall.ECONNABORTED,
+		syscall.ECONNRESET,
+		syscall.EPIPE,
 	}
+
+
+	// Get syscall errno hex
+	if v, ok := err.(*net.OpError); ok {
+		if err, ok := v.Err.(*os.SyscallError); ok {
+			errno := err.Err.(syscall.Errno)
+			src := "https://cs.opensource.google/go/go/+/refs/tags/go1.21.5:src/syscall/zerrors_linux_amd64.go;l=1183"
+			logf(Normal, "panic: ERRNO (0x%x)\n%s", int(errno), src)
+		}
+	}
+
+	handledErrs := []error{
+		discord.ErrCannotConnect,
+		io.EOF,
+	}
+
+	for _, v := range handledErrs {
+		if errors.Is(err, v) {
+			return
+		}
+	}
+
+
+	for _, e := range handledErrors {
+		if errors.Is(err, e) {
+			log(Network, "reattempting connection")
+			time.Sleep(3 * time.Second)
+			return
+		}
+	}
+
+	panic(err)
 }
 
 func main() {
-	flag.Parse()
-	debug("verbose logging enabled")
-
-	if *version {
-		fmt.Println("mpdrp version:", Version)
-		return
+conn:
+	client := discord.NewDiscordPresence(strconv.Itoa(*clientID))
+	mpd := new(music.MPDConnection)
+	log(Normal, "connecting to discord")
+	if err := client.Connect(); err != nil {
+		logf(Normal, "failed %s", err)
+		retry_or_panic(err)
+		goto conn
 	}
-
-	if *timeout == 0 {
-		if val, ok := os.LookupEnv("MPD_TIMEOUT"); ok {
-			v, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			*timeout = time.Duration(v) * time.Second
-		}
+	defer client.Close()
+	logf(Normal, "connected to discord: %s", client.Conn.RemoteAddr())
+	log(Network, "starting discord handshake")
+	b, err := client.CreateHandshake()
+	logjson(Network, "handshake result", json.RawMessage(b))
+	if err != nil {
+		logf(Normal, "failed %s", err)
+		retry_or_panic(err)
+		goto conn
 	}
-
-	// Account for no playing songs
-	var addressPool []Addr
-	if *address != "" {
-		if addr, err := resolveAddr(*address); err != nil {
-			panic(err)
-
-		} else {
-			addressPool = append(addressPool, addr)
-		}
-	} else {
-		if addrs, err := getDefaultAddresses(); err != nil {
-			panic(err)
-		} else {
-			addressPool = append(addressPool, addrs...)
-		}
+	log(Normal, "connecting to mpd")
+	if err := mpd.Connect(nil); err != nil {
+		logf(Normal, "failed %s", err)
+		retry_or_panic(err)
+		goto conn
 	}
-	// Connection structs
-	var mpc = new(mpd.MPDConnection)
-	var ipc = discord.NewDiscordPresence(strconv.FormatInt(*clientID, 10))
+	defer mpd.Close()
+	logf(Normal, "connected to mpd instance: %s", mpd.RawConn.RemoteAddr())
 
-connection_loop:
-	for index := 0; index < 1 || *retry; index++ {
-		if index >= 1 {
-			mpc.Close()
-			ipc.Close()
-			time.Sleep(*retryDelay)
+	var cachedURLs = make(map[string]string)
+	for {
+		// Get current status of song
+		currentStatus, err := mpd.Exec(
+			music.Command{Name: "currentsong"},
+			music.Command{Name: "status"},
+		)
+		if err != nil {
+			retry_or_panic(err)
+			goto conn
 		}
 
-		log.Printf("attempting to connect to %d address(es)\n", len(addressPool))
-		for index, val := range addressPool {
-			err := mpc.Connect(val.address.Network(), val.address.String(), *timeout)
-			if err == nil {
-				log.Printf("mpd: connected to %s/%s\n", val.address.Network(), val.address.String())
-				break
+		var activity = &discord.Activity{
+			Assets: &discord.Assets{
+				LargeText: "Music Player Daemon",
+			},
+		}
+		if currentStatus.Get("state") != "stop" {
+			// Activity metadata
+			album, ok := currentStatus.Records["Album"]
+			if !ok {
+				album = []string{"??"}
 			}
-			log.Printf("mpd: could not connect to %s\n%s\n", val.address.String(), err)
-			if index == len(addressPool)-1 {
-				log.Printf("mpd: could not connect to a viable address")
-				continue connection_loop
+			artist, ok := currentStatus.Records["Artist"]
+			if !ok {
+				artist = []string{"??"}
 			}
-		}
-
-		if *password != "" {
-			if err, _ := mpc.Exec(mpd.Command{Name: "password", Args: []string{*password}}); err != nil {
-				log.Fatalf("mpd: incorrect password: %s\n", err)
+			details, ok := currentStatus.Records["Title"]
+			if !ok {
+				details = []string{"??"}
 			}
-			log.Println("mpd: successfully authenticated to mpd")
-		}
 
-		if err := ipc.Connect(); err != nil {
-			log.Printf("discord: %s\n", err)
-			continue
-		} else {
-			log.Println("discord: connected to ipc pipe")
-		}
+			state := fmt.Sprintf("%s by %s", album[0], artist[0])
+			activity.Details = &details[0]
+			activity.State = &state
 
-		if err := ipc.CreateHandshake(); err != nil {
-			log.Printf("discord: %s\n", err)
-			continue
-		} else {
-			log.Println("discord: successfully sent handshake")
-		}
-
-		for {
-			if err := updateRichPresence(mpc, ipc); err != nil {
-				log.Println("discord: error while updating activity: ", err)
-				continue connection_loop
-			}
-			for nt := time.Now(); time.Now().Unix() < nt.Add(time.Second*15).Unix(); {
-				if _, err := mpc.Exec(mpd.Command{Name: "ping"}); err != nil {
-					if errors.Is(err, mpd.ResponseError{}) {
-						log.Fatalln(err)
-					}
-					continue connection_loop
+			// Reuse last image if available
+			v, ok := cachedURLs[currentStatus.Get("songid")]
+			if !ok {
+				v, err = GetCoverArt(*currentStatus)
+				if err != nil {
+					logf(Normal, "[error] encountered error while fetching cover art: %s", err)
+				} else {
+					cachedURLs[currentStatus.Get("songid")] = v
 				}
-				time.Sleep(time.Second * 5)
 			}
-
-			if _, err := mpc.Exec(mpd.Command{Name: "idle", Args: []string{"player"}}); err != nil {
-				if errors.Is(err, mpd.ResponseError{}) {
-					log.Fatalln(err)
+			activity.Assets.LargeImage = v
+			activity.Assets.SmallImage = PauseAsset
+			activity.Assets.SmallText = "Paused"
+			if currentStatus.Get("state") == "play" {
+				activity.Assets.SmallImage = PlayAsset
+				activity.Assets.SmallText = "Playing"
+				var duration, elapsed float64
+				if duration, err = strconv.ParseFloat(currentStatus.Get("duration"), 64); err != nil {
+					panic(err)
 				}
-				continue connection_loop
+				if elapsed, err = strconv.ParseFloat(currentStatus.Get("elapsed"), 64); err != nil {
+					panic(err)
+				}
+				activity.Timestamps = &discord.Timestamps{
+					End: time.Now().Add(time.Second * time.Duration(duration-elapsed)).Unix(),
+				}
 			}
-
+		} else {
+			activity = nil
+		}
+		_, body, err := client.SetActivity(activity)
+		logjson(Network, "set activity", json.RawMessage(body))
+		if err != nil {
+			retry_or_panic(err)
+			goto conn
+		}
+		// Idle and wait
+		_, err = mpd.Exec(music.Command{Name: "idle", Args: []string{"player"}})
+		if err != nil {
+			retry_or_panic(err)
+			goto conn
 		}
 
 	}

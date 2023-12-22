@@ -6,30 +6,22 @@
 <img align=right src="https://media.discordapp.net/attachments/1148910978948407339/1156214030822805575/image.png" alt="showcase image" width=40% height=40%>
 </div>
 
-## Using
-You will only need [Go](https://go.dev) and the dependencies listed in the `go.mod` file. As of right now, I do not provide
-prebuilt binaries, but maybe if this project receives more recognition I will.
+## Usage
 
-```bash
-$ git clone https://github.com/itslychee/mpdrp && cd mpdrp
-$ go build ./cmd/mpdrp # or alternatively go run ./cmd/mpdrp and use the arguments below
-$ ./mpdrp -retry --retry-delay 1s --address 127.0.0.1:1234 --password "password!"
-// 2021/08/22 02:33:31 ] attempting to connect to 1 address(es)
-// ...
-```
-<br>
-<br>
-<br>
-<br>
+### Nix
 
-## Autostart
+* `nix build .#mpdrp` for the base `mpdrp` package
+* `nix build .#mpdrp.withMpc` for the base `mpdrp` package that also includes `cmd/mpc`
+* `nix run .#mpdrp` runs mpdrp 
 
-There is a batch file, a systemd service file, and a launchd file located in `config/` that you can use with your process manager.
+The home manager module can be found at `homeManagerModules.default`, I currently do not
+have a NixOS module as I use mpd on a user level, but other than that, there's nothing
+preventing support for one so feel free to PR.
 
-## Copyright Notice
-The image used for the front facing project icon uses assets from MPD (https://www.musicpd.org) and Discord (https://discord.com), 
-<strong><u>all rights are reserved</u></strong> to these entities and any legitimate request made by either one for removal should be done 
-through [email](mailto:itslychee@protonmail.com), or my discord `@itsalychee`. As such this excludes the image from the AGPL-3.0 license.
+### Other (including Windows)
 
-The rest of the project, including assets in `assets/`, is licensed under AGPLv3 unless explicitly stated otherwise. By contributing to this project
-you also agree to license your code under the same license.
+You will need Go installed to compile the program
+
+* `go install ./cmd/mpdrp ./cmd/mpc` (omit any unwanted sub packages)
+
+And place it somewhere suitable to be added and/or used in `$PATH`

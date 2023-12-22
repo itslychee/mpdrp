@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/itslychee/mpdrp/mpd"
 )
@@ -24,23 +24,13 @@ func main() {
 	password := flag.String("password", "", "password to authorize the connection with MPD")
 	flag.Parse()
 
-	// Copied from cmd/mpdrp/main.go :)
-	var networkType string
-	switch {
-	case strings.HasPrefix(*address, "/"):
-		// Unix socket
-		networkType = "unix"
-	case strings.HasPrefix(*address, "@"):
-		// Abstract unix socket
-		networkType = "unixgram"
-	default:
-		// TCP, guessingly
-		networkType = "tcp"
-	}
-
 	var client mpd.MPDConnection
 
-	err := client.Connect(networkType, *address, 0)
+	err := client.Connect(&mpd.MPDConnInfo{
+		Address: mpd.ResolveAddr(*address),
+		Password: *password,
+		Timeout: time.Duration(time.Second * 30),
+	})
 	if err != nil {
 		fmt.Printf("error while trying to connect to MPD [%s]\n", *address)
 		panic(err)

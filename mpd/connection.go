@@ -40,7 +40,8 @@ func ResolveAddr(address string) (addr net.Addr) {
 }
 
 type MPDConnection struct {
-	conn *textproto.Conn
+	Conn    *textproto.Conn
+	RawConn net.Conn
 }
 
 func (mpd *MPDConnection) Connect(conn *MPDConnInfo) error {
@@ -143,15 +144,16 @@ func (mpd *MPDConnection) Connect(conn *MPDConnInfo) error {
 
 func (mpd *MPDConnection) connect(network, address string, timeout time.Duration) error {
 	// Support timeouts to allow more flexibility
-	if mpd.conn != nil {
+	if mpd.Conn != nil {
 		return errors.New("cannot connect to MPD, you're already connected")
 	}
 	c, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
 		return err
 	}
-	mpd.conn = textproto.NewConn(c)
-	s, err := mpd.conn.R.ReadString(0x0A)
+	mpd.RawConn = c 
+	mpd.Conn = textproto.NewConn(c)
+	s, err := mpd.Conn.R.ReadString(0x0A)
 	if !strings.HasPrefix(s, "OK MPD") {
 		return fmt.Errorf("the server did not answer correctly, got %s instead", s)
 	}
@@ -164,30 +166,29 @@ func (mpd *MPDConnection) connect(network, address string, timeout time.Duration
 
 func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 	// Command execution
-	sid := mpd.conn.Next()
+	sid := mpd.Conn.Next()
 
-	mpd.conn.StartRequest(sid)
+	mpd.Conn.StartRequest(sid)
 
-	mpd.conn.W.WriteString("command_list_begin\n")
+	mpd.Conn.W.WriteString("command_list_begin\n")
 	for _, val := range cmds {
-		mpd.conn.W.Write([]byte(val.String()))
+		mpd.Conn.W.Write([]byte(val.String()))
 	}
-	mpd.conn.W.WriteString("command_list_end\n")
-	if err := mpd.conn.W.Flush(); err != nil {
+	mpd.Conn.W.WriteString("command_list_end\n")
+	if err := mpd.Conn.W.Flush(); err != nil {
 		return nil, err
 	}
 
-	mpd.conn.EndRequest(sid)
+	mpd.Conn.EndRequest(sid)
 
 	var response = &Response{
 		Records: make(map[string][]string),
 	}
 
-	mpd.conn.StartResponse(sid)
-	defer mpd.conn.EndResponse(sid)
+	mpd.Conn.StartResponse(sid)
+	defer mpd.Conn.EndResponse(sid)
 	for {
-		s, err := mpd.conn.R.ReadString(0x0A)
-		fmt.Printf("%s\n", s)
+		s, err := mpd.Conn.R.ReadString(0x0A)
 		s = strings.TrimSpace(s)
 		if err != nil {
 			return response, err
@@ -232,7 +233,6 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 		default:
 			// TODO: Fix binary responses
 			fields := strings.SplitN(string(s), ":", 2)
-			fmt.Printf("fields: [%+v]\n\n", fields)
 			fields[1] = strings.TrimSpace(fields[1])
 			response.Records[fields[0]] = append(response.Records[fields[0]], fields[1])
 			if fields[0] == "binary" {
@@ -244,7 +244,7 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 					panic(err)
 				}
 				response.Binary = make([]byte, allocSize)
-				if _, err = mpd.conn.R.Read(response.Binary); err != nil {
+				if _, err = mpd.Conn.R.Read(response.Binary); err != nil {
 					panic(err)
 				}
 			}
@@ -256,8 +256,8 @@ func (mpd *MPDConnection) Exec(cmds ...Command) (*Response, error) {
 }
 
 func (mpd *MPDConnection) Close() error {
-	if mpd.conn != nil {
-		return mpd.conn.Close()
+	if mpd.Conn != nil {
+		return mpd.Conn.Close()
 	}
 	return nil
 }

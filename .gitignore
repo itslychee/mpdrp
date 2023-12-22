@@ -1,7 +1,7 @@
-// Binaries
+# Binaries
 *.o
 *.exe
 *.dll
 
-// Build directory
-build/
+# Closure symlink 
+result

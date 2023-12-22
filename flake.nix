@@ -1,29 +1,41 @@
 {
   inputs = {
-    utils.url = "github:numtide/flake-utils";
-    unstable-nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     gomod2nix.url = "github:nix-community/gomod2nix";
   };
-  outputs = { self, nixpkgs, unstable-nixpkgs, utils, gomod2nix, ... }@inputs: utils.lib.eachDefaultSystem (system:
-    let
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [
-          gomod2nix.overlays.default
-          (final: prev: {
-            unstable = unstable-nixpkgs.legacyPackages.${system};
-          })
-        ];
+  outputs = {
+    self,
+    gomod2nix,
+    nixpkgs,
+  }: let
+    supportedSystems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+    withSystems = f:
+      nixpkgs.lib.genAttrs supportedSystems (system: let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [gomod2nix.overlays.default];
+        };
+      in
+        f {inherit system pkgs;});
+  in {
+    packages = withSystems ({
+      pkgs,
+      system,
+    }:
+      import nix/packages.nix {
+        inherit (nixpkgs) lib;
+        inherit pkgs;
+      });
+
+    apps = withSystems ({ pkgs, system, }: {
+      update = {
+        type = "app";
+        program = toString (pkgs.writeScript "mpdrp-dev-updater" ''
+          ${pkgs.gomod2nix}/bin/gomod2nix --outdir ./nix
+        '');
       };
-    in
-    with pkgs; {
-      devShells.default = mkShell {
-        packages = [ unstable.go gomod2nix.packages.${system}.default ];
-      };
-      # Making it accessible to other Nix users
-      packages.default = import nix/packages.nix pkgs;
-      overlays.default = (_: _: { mpdrp = self.packages.${system}.default.mpdrp; });
-    }) // {
-      nixosModules.default = import nix/module.nix;
-    };
-  }
+    });
+    formatter = withSystems ({ pkgs, system, }: pkgs.alejandra);
+    homeManagerModules.default = import ./nix/module.nix self;
+  };
+}
