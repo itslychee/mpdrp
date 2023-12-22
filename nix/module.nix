@@ -67,9 +67,9 @@ in {
       };
     };
   };
-  config = {
+  config = lib.mkIf cfg.enable {
     home.packages = [cfg.package];
-    systemd.user.services.mpdrp = lib.mkIf cfg.enable {
+    systemd.user.services.mpdrp = {
       Unit.Description = "A discord rich presence for MPD";
       Unit.After = ["mpd.socket"];
       Install.WantedBy = ["default.target"];
