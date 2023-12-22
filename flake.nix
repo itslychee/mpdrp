@@ -26,6 +26,16 @@
         inherit (nixpkgs) lib;
         inherit pkgs;
       });
+
+    apps = withSystems ({ pkgs, system, }: {
+      update = {
+        type = "app";
+        program = toString (pkgs.writeScript "mpdrp-dev-updater" ''
+          ${pkgs.gomod2nix}/bin/gomod2nix --outdir ./nix
+        '');
+      };
+    });
+    formatter = withSystems ({ pkgs, system, }: pkgs.alejandra);
     homeManagerModules.default = import ./nix/module.nix self;
   };
 }

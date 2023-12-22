@@ -5,14 +5,14 @@ schema = 3
     version = "v0.6.1"
     hash = "sha256-BL0BVaHtmPKQts/711W59AbHXjGKqFS4ZTal0RYnR9I="
   [mod."github.com/google/uuid"]
-    version = "v1.3.1"
-    hash = "sha256-JxAEAB2bFlGPShFreyOWjUahjaGV3xYS5TpfUOikod0="
+    version = "v1.5.0"
+    hash = "sha256-DasOte4xANR1VND5XEHKGhpGiyYq74TJmNrgWeIRX4U="
   [mod."golang.org/x/mod"]
-    version = "v0.8.0"
-    hash = "sha256-cgtmxQA937+MdXUiPrVeDvRoqhxD4hvIbtXAjK2SM8U="
+    version = "v0.14.0"
+    hash = "sha256-sx3hWp5l99DBfIrn821ohfoBwvaITSHMWbzPvX0btLM="
   [mod."golang.org/x/sys"]
-    version = "v0.13.0"
-    hash = "sha256-/+RDZ0a0oEfJ0k304VqpJpdrl2ZXa3yFlOxy4mjW7w0="
+    version = "v0.15.0"
+    hash = "sha256-n7TlABF6179RzGq3gctPDKDPRtDfnwPdjNCMm8ps2KY="
   [mod."golang.org/x/tools"]
-    version = "v0.6.0"
-    hash = "sha256-J0q+C3WDTK9yyHX90FV6qr6n9H07YglYg1p4H3MqyH4="
+    version = "v0.16.1"
+    hash = "sha256-zIAwVvY/5/rPDebMDpR67CR7b+GtFmGWw6AOhxIkcfI="
