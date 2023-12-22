@@ -1,25 +1,30 @@
-pkgs:
-{
-    mpdrp = pkgs.buildGoApplication rec {
-        name = "mpdrp";
-        pname = name;
-        go = pkgs.go;
-        modules = ./gomod2nix.toml;
-        src = ../.;
-        doCheck = false;
-        subPackages = [
-            "cmd/mpdrp"
-        ];
+{ pkgs, lib, version ? "dev"}:
+let
+  # longest function name in existence!
+  wrapGo = pkgs.buildGoApplication;
+  pkg = lib.makeOverridable ({ withMpc }: {
+    inner = {
+      inherit version;
+      pname = "mpdrp";
+      doCheck = false; 
+      modules = ./gomod2nix.toml;
+      src = with lib.fileset; toSource {
+          root = ../.;
+          fileset = difference ../. (unions [
+            ../config
+            ../assets
+            ../release.sh
+          ]);
+        };
+      subPackages = lib.flatten [ 
+        "cmd/mpdrp"
+        (lib.optionals withMpc [ "cmd/mpc" ])
+      ];
+      meta.mainProgram = "mpdrp";
     };
-    mpdrp-mpc = pkgs.buildGoApplication rec {
-        name = "mpdrp-mpc";
-        pname = "mpc";
-        go = pkgs.go;
-        modules = ./gomod2nix.toml;
-        src = ../.;
-        doCheck = false;
-        subPackages = [
-            "cmd/mpc"
-        ];
-    };
-} 
+  }) { withMpc = false; };
+in {
+  mpdrp = wrapGo (pkg.inner // {
+    passthru.withMpc = wrapGo (pkg.override { withMpc = true; }).inner;
+  });
+}
