@@ -4,4 +4,4 @@
 *.dll
 
 # Closure symlink 
-result/
+result
