@@ -16,8 +16,6 @@
           root = ../.;
           fileset = difference ../. (unions [
             ../config
-            ../assets
-            ../release.sh
           ]);
         };
       subPackages = lib.flatten [
