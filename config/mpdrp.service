@@ -1,9 +1,0 @@
-[Unit]
-Description=A Discord rich presence for MPD
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/mpdrp
-
-[Install]
-WantedBy=multi-user.target
