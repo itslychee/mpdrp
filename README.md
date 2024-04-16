@@ -11,15 +11,13 @@
 
 ### Nix
 
-* `nix build .#mpdrp` for the base `mpdrp` package
-* `nix build .#mpdrp.withMpc` for the `mpdrp` and `mpc` packages
-* `nix run .#mpdrp` to run mpdrp 
+Nix has first class support, prebuilt closures can be substituted from [`cache.garnix.io`](https://garnix.io), details
+on how to utilize Garnix's binary cache are provided [here](https://garnix.io/docs/caching).
 
-The home manager module can be found at `homeManagerModules.default`, I currently do not
-have a NixOS module as I use mpd on a user level, but other than that, there's nothing
-preventing support for one so feel free to PR.
+See the available outputs under `packages` via `nix flake show github:itslychee/mpdrp`, or just
+look at [`default.nix`](./default.nix).
 
-### Other (including Windows)
+### Other
 
 You will need Go installed to compile the program
 
