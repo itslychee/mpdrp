@@ -5,3 +5,6 @@
 
 # Closure symlink 
 result
+
+# direnv
+.direnv/
