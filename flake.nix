@@ -16,5 +16,10 @@
     }: import ./. { inherit pkgs; });
     formatter = withSystems ({ pkgs, system, }: pkgs.alejandra);
     homeManagerModules.default = import ./nix/module.nix self;
+    devShell = withSystems ({ pkgs, system}: pkgs.mkShell {
+        packages = builtins.attrValues {
+            inherit (pkgs) gopls go;
+        };
+    });
   };
 }
