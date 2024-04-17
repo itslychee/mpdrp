@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	debugLevel    = flag.Int("debug", 3, "debug level for program, zero disables debugging output")
+	debugLevel    = flag.Int("debug", 1, "debug level for program, zero disables debugging output")
 	clientID      = flag.Int("client-id", ClientID, "rich presence client id, this normally should not be changed")
 	noAlbumCovers = flag.Bool("no-album-covers", false, "Do not set album covers and retrieve them via Cover Art Archive")
 	reconnect     = flag.Duration("reconnect", time.Duration(time.Second*5), "grace period before reattempting to reconnect to MPD & Discord, must be above 5 seconds or zero to disable this")
