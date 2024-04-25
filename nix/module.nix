@@ -15,15 +15,7 @@ in {
       package = mkOption {
         description = "Package to use for MDPRP";
         type = types.package;
-        default =
-          if cfg.withMpc
-          then mpdrp.withMpc
-          else mpdrp;
-      };
-      withMpc = mkOption {
-        description = "include mpc";
-        default = false;
-        type = types.bool;
+        default = mpdrp;
       };
       settings = {
         reconnect = mkOption {
